@@ -2,6 +2,8 @@
 
 A containerized AI-powered Linux desktop environment accessible via web browser. VibeOS combines an intelligent coding assistant with a full graphical desktop, enabling AI-assisted development and automation.
 
+![VibeOS Desktop](docs/vibeos-screenshot.png)
+
 ## Features
 
 - **AI-Powered Desktop**: Embedded OpenCode assistant for coding, automation, and system control
