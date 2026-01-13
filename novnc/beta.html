@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<!--
+  VibeOS Custom noVNC Interface (beta.html)
+  
+  A custom-branded VNC web client built on the noVNC RFB library.
+  This replaces the default vnc.html with a cleaner, VibeOS-themed interface.
+  
+  Features:
+    - Auto-connect on page load (no connection dialog)
+    - Scaled viewport (VNC canvas fits browser window)
+    - Dark theme matching shell-ui aesthetic
+    - VibeOS branding (logo, title)
+    - Connection status indicator (green/yellow/red dot)
+    - Auto-reconnect on disconnect (3s interval, max 50 attempts)
+    - Fullscreen mode (button + F11 keyboard shortcut)
+    - Ctrl+Alt+Del button for VM control
+    - Reconnect overlay with manual retry option
+  
+  URL Parameters:
+    ?host=<hostname>     VNC host (default: current hostname)
+    ?port=<port>         VNC port (default: current port, typically 6080)
+    ?path=<path>         WebSocket path (default: 'websockify')
+    ?password=<pwd>      VNC password (if server requires auth)
+    ?resize=true         Request server to resize to match viewport
+    ?view_only=true      View-only mode (no input sent to server)
+  
+  Access: http://localhost:6080/beta.html
+  
+  Based on: noVNC vnc_lite.html (minimal reference implementation)
+  noVNC Project: https://github.com/novnc/noVNC
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VibeOS</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23667eea' rx='20' width='100' height='100'/><text x='50' y='72' font-size='60' font-family='system-ui' font-weight='bold' fill='white' text-anchor='middle'>V</text></svg>">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-color: #0a0a0a;
+            --surface-color: #1a1a1a;
+            --border-color: #333;
+            --text-color: #e0e0e0;
+            --text-muted: #888;
+            --accent-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-color: #22c55e;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            background: var(--bg-color);
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Bar */
+        #top_bar {
+            height: 36px;
+            background: var(--surface-color);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            gap: 12px;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        body.fullscreen #top_bar {
+            display: none;
+        }
+
+        #logo {
+            width: 24px;
+            height: 24px;
+            background: var(--accent-gradient);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        #title {
+            font-size: 12px;
+            font-weight: 300;
+            letter-spacing: 4px;
+            color: var(--text-color);
+            text-transform: uppercase;
+            opacity: 0.9;
+        }
+
+        #spacer {
+            flex: 1;
+        }
+
+        #status {
+            font-size: 11px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        #status_dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--warning-color);
+            transition: background-color 0.3s ease;
+        }
+
+        #status_dot.connected {
+            background: var(--success-color);
+        }
+
+        #status_dot.disconnected {
+            background: var(--error-color);
+        }
+
+        #status_dot.connecting {
+            background: var(--warning-color);
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        #buttons {
+            display: flex;
+            gap: 4px;
+        }
+
+        .toolbar_btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+
+        .toolbar_btn:hover {
+            background: var(--border-color);
+            color: var(--text-color);
+        }
+
+        .toolbar_btn:active {
+            transform: scale(0.95);
+        }
+
+        /* VNC Screen */
+        #screen {
+            flex: 1;
+            overflow: hidden;
+            background: var(--bg-color);
+        }
+
+        /* Reconnect Overlay */
+        #reconnect_overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 10, 10, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        #reconnect_overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .overlay_content {
+            text-align: center;
+            color: var(--text-color);
+        }
+
+        .overlay_logo {
+            width: 64px;
+            height: 64px;
+            background: var(--accent-gradient);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 32px;
+            margin: 0 auto 24px;
+        }
+
+        .overlay_status {
+            font-size: 18px;
+            font-weight: 300;
+            margin-bottom: 8px;
+        }
+
+        .overlay_message {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .spinner {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .spinner_dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            animation: bounce 1.4s ease-in-out infinite both;
+        }
+
+        .spinner_dot:nth-child(1) { animation-delay: -0.32s; }
+        .spinner_dot:nth-child(2) { animation-delay: -0.16s; }
+        .spinner_dot:nth-child(3) { animation-delay: 0s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .overlay_btn {
+            background: var(--accent-gradient);
+            border: none;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+
+        .overlay_btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .overlay_btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Error state */
+        .overlay_content.error .overlay_logo {
+            background: var(--error-color);
+        }
+    </style>
+
+    <script type="module">
+        // ====================================================================
+        // VibeOS VNC Client
+        // Uses noVNC's RFB (Remote Frame Buffer) library for VNC protocol
+        // ====================================================================
+        
+        import RFB from './core/rfb.js';
+
+        // ====================================================================
+        // State Management
+        // ====================================================================
+        let rfb = null;  // RFB connection instance
+        let reconnectTimer = null;
+        let reconnectAttempts = 0;
+        const RECONNECT_DELAY = 3000;
+        const MAX_RECONNECT_ATTEMPTS = 50;
+
+        // DOM Elements
+        const screenEl = document.getElementById('screen');
+        const statusDot = document.getElementById('status_dot');
+        const statusText = document.getElementById('status_text');
+        const overlay = document.getElementById('reconnect_overlay');
+        const overlayStatus = document.getElementById('overlay_status');
+        const overlayMessage = document.getElementById('overlay_message');
+        const overlayContent = document.querySelector('.overlay_content');
+        const retryBtn = document.getElementById('retry_btn');
+        const fullscreenBtn = document.getElementById('fullscreen_btn');
+        const ctrlAltDelBtn = document.getElementById('cad_btn');
+
+        // Read URL parameters
+        function getParam(name, defaultValue) {
+            const re = new RegExp('.*[?&#]' + name + '=([^&#]*)');
+            const match = (document.location.href + window.location.hash).match(re);
+            return match ? decodeURIComponent(match[1]) : defaultValue;
+        }
+
+        // Build WebSocket URL
+        function buildWebSocketUrl() {
+            const host = getParam('host', window.location.hostname);
+            const port = getParam('port', window.location.port);
+            const path = getParam('path', 'websockify');
+            
+            let url = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            url += '://' + host;
+            if (port) url += ':' + port;
+            url += '/' + path;
+            
+            return url;
+        }
+
+        // Update UI status
+        function setStatus(state, message) {
+            statusDot.className = state;
+            statusText.textContent = message || state.charAt(0).toUpperCase() + state.slice(1);
+        }
+
+        // Show/hide reconnect overlay
+        function showOverlay(status, message, isError = false) {
+            overlayStatus.textContent = status;
+            overlayMessage.textContent = message;
+            overlayContent.classList.toggle('error', isError);
+            overlay.classList.remove('hidden');
+        }
+
+        function hideOverlay() {
+            overlay.classList.add('hidden');
+        }
+
+        // Connection handlers
+        function onConnect() {
+            setStatus('connected', 'Connected');
+            hideOverlay();
+            reconnectAttempts = 0;
+            cancelReconnect();
+        }
+
+        function onDisconnect(e) {
+            rfb = null;
+            
+            if (e.detail.clean) {
+                setStatus('disconnected', 'Disconnected');
+                showOverlay('Disconnected', 'Connection closed cleanly. Reconnecting...');
+            } else {
+                setStatus('disconnected', 'Connection Lost');
+                showOverlay('Connection Lost', 'Attempting to reconnect...');
+            }
+            
+            scheduleReconnect();
+        }
+
+        function onCredentialsRequired(e) {
+            const password = prompt('VNC Password Required:');
+            if (password) {
+                rfb.sendCredentials({ password: password });
+            }
+        }
+
+        function onSecurityFailure(e) {
+            setStatus('disconnected', 'Auth Failed');
+            showOverlay('Authentication Failed', e.detail.reason || 'Invalid credentials', true);
+            cancelReconnect();
+        }
+
+        // Connect to VNC
+        function connect() {
+            if (rfb) {
+                rfb.disconnect();
+                rfb = null;
+            }
+
+            setStatus('connecting', 'Connecting...');
+            
+            const url = buildWebSocketUrl();
+            const password = getParam('password', '');
+
+            try {
+                rfb = new RFB(screenEl, url, {
+                    credentials: password ? { password: password } : undefined
+                });
+
+                // Configure
+                rfb.scaleViewport = true;
+                rfb.resizeSession = getParam('resize', 'false') === 'true';
+                rfb.viewOnly = getParam('view_only', 'false') === 'true';
+
+                // Events
+                rfb.addEventListener('connect', onConnect);
+                rfb.addEventListener('disconnect', onDisconnect);
+                rfb.addEventListener('credentialsrequired', onCredentialsRequired);
+                rfb.addEventListener('securityfailure', onSecurityFailure);
+
+            } catch (err) {
+                console.error('Connection error:', err);
+                setStatus('disconnected', 'Error');
+                showOverlay('Connection Error', err.message, true);
+                scheduleReconnect();
+            }
+        }
+
+        // Reconnect logic
+        function scheduleReconnect() {
+            cancelReconnect();
+            
+            if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                showOverlay('Connection Failed', 'Max reconnect attempts reached. Click to retry.', true);
+                return;
+            }
+            
+            reconnectAttempts++;
+            overlayMessage.textContent = `Reconnecting in ${RECONNECT_DELAY/1000}s... (attempt ${reconnectAttempts})`;
+            
+            reconnectTimer = setTimeout(() => {
+                overlayMessage.textContent = 'Connecting...';
+                connect();
+            }, RECONNECT_DELAY);
+        }
+
+        function cancelReconnect() {
+            if (reconnectTimer) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = null;
+            }
+        }
+
+        // Manual retry
+        function retryNow() {
+            cancelReconnect();
+            reconnectAttempts = 0;
+            overlayMessage.textContent = 'Connecting...';
+            connect();
+        }
+
+        // Fullscreen toggle
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().then(() => {
+                    document.body.classList.add('fullscreen');
+                }).catch(err => {
+                    console.warn('Fullscreen failed:', err);
+                });
+            } else {
+                document.exitFullscreen().then(() => {
+                    document.body.classList.remove('fullscreen');
+                });
+            }
+        }
+
+        // Handle fullscreen change from Escape key
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                document.body.classList.remove('fullscreen');
+            }
+        });
+
+        // Send Ctrl+Alt+Del
+        function sendCtrlAltDel() {
+            if (rfb) {
+                rfb.sendCtrlAltDel();
+            }
+        }
+
+        // Button handlers
+        retryBtn.addEventListener('click', retryNow);
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
+        ctrlAltDelBtn.addEventListener('click', sendCtrlAltDel);
+
+        // Keyboard shortcut: F11 for fullscreen
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F11') {
+                e.preventDefault();
+                toggleFullscreen();
+            }
+        });
+
+        // Start connection
+        showOverlay('Connecting', 'Establishing connection to VibeOS...');
+        connect();
+    </script>
+</head>
+
+<body>
+    <div id="top_bar">
+        <div id="logo">V</div>
+        <div id="title">VIBEOS</div>
+        <div id="spacer"></div>
+        <div id="status">
+            <span id="status_dot" class="connecting"></span>
+            <span id="status_text">Connecting...</span>
+        </div>
+        <div id="buttons">
+            <button class="toolbar_btn" id="fullscreen_btn" title="Fullscreen (F11)">Fullscreen</button>
+            <button class="toolbar_btn" id="cad_btn" title="Send Ctrl+Alt+Delete">Ctrl+Alt+Del</button>
+        </div>
+    </div>
+
+    <div id="screen"></div>
+
+    <div id="reconnect_overlay">
+        <div class="overlay_content">
+            <div class="overlay_logo">V</div>
+            <div id="overlay_status" class="overlay_status">Connecting</div>
+            <div id="overlay_message" class="overlay_message">Establishing connection...</div>
+            <div class="spinner">
+                <div class="spinner_dot"></div>
+                <div class="spinner_dot"></div>
+                <div class="spinner_dot"></div>
+            </div>
+            <button class="overlay_btn" id="retry_btn">Retry Now</button>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,14 @@
+# VibeOS Labwc Environment
+
+# Wayland configuration
+XDG_SESSION_TYPE=wayland
+XDG_CURRENT_DESKTOP=labwc
+MOZ_ENABLE_WAYLAND=1
+QT_QPA_PLATFORM=wayland
+
+# Electron/Chromium Wayland support
+ELECTRON_OZONE_PLATFORM_HINT=auto
+
+# VibeOS specific
+VIBEOS_TERMINAL=alacritty
+VIBEOS_DEFAULT_CMD=opencode

@@ -1,0 +1,30 @@
+{
+  "name": "vibeos-shell",
+  "version": "0.2.0",
+  "description": "VibeOS Shell - Embedded conversational AI interface",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --enable-logging",
+    "build": "electron-builder",
+    "pack": "electron-builder --dir"
+  },
+  "author": "VibeOS",
+  "license": "MIT",
+  "dependencies": {
+    "eventsource": "^2.0.2",
+    "marked": "^15.0.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.vibeos.shell",
+    "productName": "VibeOS Shell",
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Utility"
+    }
+  }
+}

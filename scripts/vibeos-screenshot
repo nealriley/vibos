@@ -1,0 +1,36 @@
+#!/bin/bash
+# vibeos-screenshot - Take a screenshot of the VibeOS desktop
+#
+# Usage:
+#   vibeos-screenshot              # Auto-named with timestamp
+#   vibeos-screenshot myshot.png   # Custom filename
+#
+# The screenshot will be saved to ./shared/ directory
+#
+# Environment:
+#   VIBEOS_CONTAINER - Container name (default: vibeos-dev)
+
+set -e
+
+CONTAINER="${VIBEOS_CONTAINER:-vibeos-dev}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SHARED_DIR="${SCRIPT_DIR}/../shared"
+
+# Filename argument (optional)
+FILENAME="${1:-}"
+
+# Take the screenshot
+if [ -n "$FILENAME" ]; then
+    OUTPUT=$(docker exec "$CONTAINER" /home/vibe/scripts/screenshot.sh "$FILENAME")
+else
+    OUTPUT=$(docker exec "$CONTAINER" /home/vibe/scripts/screenshot.sh)
+fi
+
+# Extract just the filename from the container path
+BASENAME=$(basename "$OUTPUT")
+LOCAL_PATH="${SHARED_DIR}/${BASENAME}"
+
+echo "Screenshot saved: $LOCAL_PATH"
+
+# Return the local path
+echo "$LOCAL_PATH"

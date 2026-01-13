@@ -1,0 +1,16 @@
+#!/bin/bash
+# VibeOS Openbox Autostart
+
+# Set background to pure black (install x11-apps if needed)
+xsetroot -solid '#0a0a0a' 2>/dev/null || true
+
+# Disable screen saver
+xset s off 2>/dev/null || true
+xset -dpms 2>/dev/null || true
+xset s noblank 2>/dev/null || true
+
+# Wait for display to be ready
+sleep 2
+
+# Launch VibeOS Shell with sandbox disabled for container environment
+cd /home/vibe/shell-ui && ELECTRON_DISABLE_SANDBOX=1 npm start &

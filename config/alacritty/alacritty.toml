@@ -1,0 +1,72 @@
+# VibeOS Alacritty Configuration
+
+[window]
+decorations = "full"
+opacity = 0.95
+dynamic_title = true
+padding = { x = 8, y = 8 }
+
+[font]
+size = 13.0
+
+[font.normal]
+family = "JetBrains Mono"
+style = "Regular"
+
+[font.bold]
+family = "JetBrains Mono"
+style = "Bold"
+
+[font.italic]
+family = "JetBrains Mono"
+style = "Italic"
+
+# VibeOS Dark Theme
+[colors.primary]
+background = "#0a0a0a"
+foreground = "#e0e0e0"
+
+[colors.cursor]
+text = "#0a0a0a"
+cursor = "#7c3aed"
+
+[colors.selection]
+text = "#e0e0e0"
+background = "#7c3aed"
+
+[colors.normal]
+black   = "#1a1a1a"
+red     = "#ef4444"
+green   = "#22c55e"
+yellow  = "#eab308"
+blue    = "#3b82f6"
+magenta = "#7c3aed"
+cyan    = "#06b6d4"
+white   = "#e0e0e0"
+
+[colors.bright]
+black   = "#404040"
+red     = "#f87171"
+green   = "#4ade80"
+yellow  = "#facc15"
+blue    = "#60a5fa"
+magenta = "#a78bfa"
+cyan    = "#22d3ee"
+white   = "#ffffff"
+
+[cursor]
+style = { shape = "Block", blinking = "On" }
+blink_interval = 750
+
+[scrolling]
+history = 10000
+multiplier = 3
+
+[keyboard]
+bindings = [
+  { key = "V", mods = "Control|Shift", action = "Paste" },
+  { key = "C", mods = "Control|Shift", action = "Copy" },
+  { key = "Plus", mods = "Control", action = "IncreaseFontSize" },
+  { key = "Minus", mods = "Control", action = "DecreaseFontSize" },
+  { key = "Key0", mods = "Control", action = "ResetFontSize" },
+]

@@ -1,0 +1,58 @@
+#!/bin/bash
+# vibeos-send - Send a message to the VibeOS desktop session
+#
+# Usage:
+#   vibeos-send "Open Chrome and go to github.com"
+#   vibeos-send "Create a file called test.txt"
+#   echo "What is 2+2?" | vibeos-send
+#
+# Environment:
+#   VIBEOS_HOST - OpenCode server host (default: localhost)
+#   VIBEOS_PORT - OpenCode server port (default: 4096)
+#   VIBEOS_SESSION - Session name (default: desktop)
+
+set -e
+
+HOST="${VIBEOS_HOST:-localhost}"
+PORT="${VIBEOS_PORT:-4096}"
+SESSION_NAME="${VIBEOS_SESSION:-desktop}"
+BASE_URL="http://${HOST}:${PORT}"
+
+# Get message from argument or stdin
+if [ -n "$1" ]; then
+    MESSAGE="$*"
+else
+    MESSAGE=$(cat)
+fi
+
+if [ -z "$MESSAGE" ]; then
+    echo "Usage: vibeos-send <message>" >&2
+    echo "   or: echo <message> | vibeos-send" >&2
+    exit 1
+fi
+
+# Find session by name
+SESSION_ID=$(curl -s "${BASE_URL}/session" | jq -r ".[] | select(.title == \"${SESSION_NAME}\") | .id")
+
+if [ -z "$SESSION_ID" ] || [ "$SESSION_ID" = "null" ]; then
+    echo "Error: Session '${SESSION_NAME}' not found" >&2
+    echo "Available sessions:" >&2
+    curl -s "${BASE_URL}/session" | jq -r '.[].title' >&2
+    exit 1
+fi
+
+# Send message
+RESPONSE=$(curl -s -X POST "${BASE_URL}/session/${SESSION_ID}/message" \
+    -H "Content-Type: application/json" \
+    -d "{\"parts\": [{\"type\": \"text\", \"text\": $(echo "$MESSAGE" | jq -Rs .)}]}")
+
+# Extract and display text response
+echo "$RESPONSE" | jq -r '.parts[] | select(.type == "text") | .text' | sed '/^$/d'
+
+# Show tool calls if any
+TOOL_CALLS=$(echo "$RESPONSE" | jq -r '.parts[] | select(.type == "tool") | "\(.tool): \(.state.input.command // .state.input | tostring) -> \(.state.status)"')
+if [ -n "$TOOL_CALLS" ]; then
+    echo ""
+    echo "Tool calls:"
+    echo "$TOOL_CALLS"
+fi

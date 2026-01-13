@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+  <resistance>
+    <strength>10</strength>
+    <screen_edge_strength>20</screen_edge_strength>
+  </resistance>
+
+  <focus>
+    <focusNew>yes</focusNew>
+    <followMouse>no</followMouse>
+    <focusLast>yes</focusLast>
+    <underMouse>no</underMouse>
+    <focusDelay>200</focusDelay>
+    <raiseOnFocus>no</raiseOnFocus>
+  </focus>
+
+  <theme>
+    <name>Clearlooks</name>
+    <titleLayout>NLIMC</titleLayout>
+    <keepBorder>yes</keepBorder>
+    <animateIconify>yes</animateIconify>
+    <font place="ActiveWindow">
+      <name>sans</name>
+      <size>10</size>
+      <weight>bold</weight>
+      <slant>normal</slant>
+    </font>
+    <font place="InactiveWindow">
+      <name>sans</name>
+      <size>10</size>
+      <weight>normal</weight>
+      <slant>normal</slant>
+    </font>
+  </theme>
+
+  <desktops>
+    <number>1</number>
+    <firstdesk>1</firstdesk>
+  </desktops>
+
+  <keyboard>
+    <!-- Super+Space: Show shell (signal) -->
+    <keybind key="Super-space">
+      <action name="Execute">
+        <command>pkill -USR1 -f 'electron.*vibeos' || true</command>
+      </action>
+    </keybind>
+
+    <!-- Super+Return: Launch terminal -->
+    <keybind key="Super-Return">
+      <action name="Execute">
+        <command>xfce4-terminal</command>
+      </action>
+    </keybind>
+
+    <!-- Super+B: Launch Firefox -->
+    <keybind key="Super-b">
+      <action name="Execute">
+        <command>firefox</command>
+      </action>
+    </keybind>
+
+    <!-- Super+Shift+B: Launch Chromium -->
+    <keybind key="Super-Shift-b">
+      <action name="Execute">
+        <command>chromium-browser --no-sandbox</command>
+      </action>
+    </keybind>
+
+    <!-- Alt+F4: Close window -->
+    <keybind key="A-F4">
+      <action name="Close"/>
+    </keybind>
+
+    <!-- Alt+Tab: Cycle windows -->
+    <keybind key="A-Tab">
+      <action name="NextWindow">
+        <finalactions>
+          <action name="Focus"/>
+          <action name="Raise"/>
+          <action name="Unshade"/>
+        </finalactions>
+      </action>
+    </keybind>
+
+    <!-- Super+F: Fullscreen toggle -->
+    <keybind key="Super-f">
+      <action name="ToggleFullscreen"/>
+    </keybind>
+
+    <!-- Super+M: Maximize toggle -->
+    <keybind key="Super-m">
+      <action name="ToggleMaximize"/>
+    </keybind>
+  </keyboard>
+
+  <mouse>
+    <dragThreshold>8</dragThreshold>
+    <doubleClickTime>200</doubleClickTime>
+    <screenEdgeWarpTime>400</screenEdgeWarpTime>
+
+    <context name="Frame">
+      <mousebind button="A-Left" action="Press">
+        <action name="Focus"/>
+        <action name="Raise"/>
+      </mousebind>
+      <mousebind button="A-Left" action="Drag">
+        <action name="Move"/>
+      </mousebind>
+    </context>
+
+    <context name="Titlebar">
+      <mousebind button="Left" action="Press">
+        <action name="Focus"/>
+        <action name="Raise"/>
+      </mousebind>
+      <mousebind button="Left" action="Drag">
+        <action name="Move"/>
+      </mousebind>
+      <mousebind button="Left" action="DoubleClick">
+        <action name="ToggleMaximize"/>
+      </mousebind>
+    </context>
+
+    <context name="Client">
+      <mousebind button="Left" action="Press">
+        <action name="Focus"/>
+        <action name="Raise"/>
+      </mousebind>
+    </context>
+
+    <context name="Close">
+      <mousebind button="Left" action="Click">
+        <action name="Close"/>
+      </mousebind>
+    </context>
+
+    <context name="Maximize">
+      <mousebind button="Left" action="Click">
+        <action name="ToggleMaximize"/>
+      </mousebind>
+    </context>
+
+    <context name="Iconify">
+      <mousebind button="Left" action="Click">
+        <action name="Iconify"/>
+      </mousebind>
+    </context>
+  </mouse>
+
+  <applications>
+    <!-- VibeOS Shell: Start fullscreen, no decorations -->
+    <application class="vibeos-shell" name="vibeos-shell">
+      <decor>no</decor>
+      <fullscreen>yes</fullscreen>
+      <layer>normal</layer>
+    </application>
+
+    <!-- Electron apps -->
+    <application class="Electron">
+      <decor>no</decor>
+      <fullscreen>yes</fullscreen>
+    </application>
+
+    <!-- Terminals get decorations -->
+    <application class="Xfce4-terminal">
+      <decor>yes</decor>
+    </application>
+
+    <application class="XTerm">
+      <decor>yes</decor>
+    </application>
+
+    <!-- Browsers -->
+    <application class="Firefox">
+      <decor>yes</decor>
+      <maximized>true</maximized>
+    </application>
+
+    <application class="Chromium-browser">
+      <decor>yes</decor>
+      <maximized>true</maximized>
+    </application>
+  </applications>
+</openbox_config>

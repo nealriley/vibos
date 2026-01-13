@@ -1,0 +1,78 @@
+# VibeOS Docker Compose Configuration
+#
+# Usage:
+#   docker-compose up -d          # Start in background
+#   docker-compose up --build     # Rebuild and start
+#   docker-compose logs -f        # View logs
+#   docker-compose down           # Stop and remove
+#
+# Access: http://localhost:6080/vnc.html
+
+version: '3.8'
+
+services:
+  vibeos:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vibeos-dev
+    
+    # Port mappings
+    ports:
+      - "4096:4096"    # OpenCode API server
+      - "6080:6080"    # noVNC web interface
+      - "5900:5900"    # VNC direct access
+      # - "22:22"      # SSH (uncomment if needed)
+    
+    # Environment configuration
+    environment:
+      - RESOLUTION=1920x1080
+      - VIBEOS_TERMINAL=xfce4-terminal
+      - VIBEOS_DEFAULT_CMD=opencode
+      # - VIBEOS_DEV=1  # Uncomment to enable Electron DevTools
+      
+      # AI Provider API Keys (set these or authenticate via browser)
+      # You can also authenticate interactively using Firefox within VibeOS
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      # Optional: OpenCode Zen (managed API access)
+      - OPENCODE_API_KEY=${OPENCODE_API_KEY:-}
+    
+    # Volume mounts
+    volumes:
+      # Mount local projects directory
+      - ./projects:/home/vibe/projects
+      
+      # Shared folder for data exchange (screenshots, exports, etc.)
+      - ./shared:/home/vibe/shared
+      
+      # Uncomment for shell-ui hot reload during development
+      # - ./shell-ui:/home/vibe/shell-ui:ro
+    
+    # Required for Electron and browsers
+    security_opt:
+      - seccomp:unconfined
+    
+    # Shared memory for browsers
+    shm_size: '2gb'
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6080/vnc.html"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# Optional: Named volume for persistent data
+# volumes:
+#   vibeos-projects:
+
+# To persist OpenCode sessions across container restarts, add this volume:
+#   - vibeos-opencode-data:/home/vibe/.opencode
+# Then add to the volumes section:
+# volumes:
+#   vibeos-opencode-data:
