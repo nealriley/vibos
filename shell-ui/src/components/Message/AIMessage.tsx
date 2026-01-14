@@ -1,12 +1,8 @@
+import { useState } from 'react'
 import type { Message, ToolPart } from '@/types/message'
 import { parseMarkdown, formatTime } from '@/lib/markdown'
-import {
-  ChatBubble,
-  ChatBubbleAvatar,
-  ChatBubbleMessage,
-  ChatBubbleTimestamp,
-  ToolCall,
-} from '@/components/ui/chat'
+import { cn } from '@/lib/cn'
+import { ChevronDown, ChevronUp, Terminal, Check, X, Loader2 } from 'lucide-react'
 
 interface AIMessageProps {
   message: Message
@@ -33,53 +29,123 @@ export function AIMessage({ message }: AIMessageProps) {
   }
 
   return (
-    <ChatBubble variant="received" layout="ai">
-      <ChatBubbleAvatar fallback="V" variant="received" />
-      
-      <div className="flex flex-col gap-2 flex-1 min-w-0">
-        <ChatBubbleTimestamp timestamp={formatTime(time)} />
-        
+    <div className="flex gap-3 group">
+      {/* Avatar */}
+      <div className="h-8 w-8 shrink-0 rounded-full bg-emerald-500/20 flex items-center justify-center">
+        <span className="text-xs font-semibold text-emerald-400">V</span>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0 space-y-3">
+        {/* Header */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-zinc-300">VibeOS</span>
+          <span className="text-xs text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity">
+            {formatTime(time)}
+          </span>
+        </div>
+
+        {/* Text content */}
         {textContent.trim() && (
-          <ChatBubbleMessage variant="received" layout="ai">
+          <div
+            className={cn(
+              'bg-zinc-800/50 border border-zinc-700/50 rounded-2xl rounded-tl-md',
+              'px-4 py-3'
+            )}
+          >
             <div
-              className="prose-content text-lg"
+              className="prose-content text-base leading-relaxed"
               dangerouslySetInnerHTML={{ __html: parseMarkdown(textContent.trim()) }}
             />
-          </ChatBubbleMessage>
+          </div>
         )}
 
+        {/* Tool calls */}
         {toolCalls.length > 0 && (
-          <div className="flex flex-col gap-2">
-            {toolCalls.map((tool, idx) => {
-              const state = tool.state || {}
-              const input = state.input || tool.input || {}
-              const output = state.output || tool.output || ''
-              const status = state.status || 'completed'
-              const title = state.title || (typeof input === 'object' ? (input as { description?: string }).description : undefined) || ''
-              
-              let inputStr = ''
-              if (typeof input === 'string') {
-                inputStr = input
-              } else if ((input as { command?: string }).command) {
-                inputStr = `$ ${(input as { command: string }).command}`
-              } else {
-                inputStr = JSON.stringify(input, null, 2)
-              }
-
-              return (
-                <ToolCall
-                  key={tool.id || idx}
-                  name={tool.tool || tool.name || 'Tool'}
-                  description={title}
-                  state={status as 'pending' | 'running' | 'completed' | 'error'}
-                  input={inputStr}
-                  output={typeof output === 'string' ? output : JSON.stringify(output, null, 2)}
-                />
-              )
-            })}
+          <div className="space-y-2">
+            {toolCalls.map((tool, idx) => (
+              <ToolCallDisplay key={tool.id || idx} tool={tool} />
+            ))}
           </div>
         )}
       </div>
-    </ChatBubble>
+    </div>
+  )
+}
+
+function ToolCallDisplay({ tool }: { tool: ToolPart }) {
+  const [expanded, setExpanded] = useState(false)
+
+  const state = tool.state || {}
+  const input = state.input || tool.input || {}
+  const output = state.output || tool.output || ''
+  const status = state.status || 'completed'
+  const title = state.title || (typeof input === 'object' ? (input as { description?: string }).description : undefined) || ''
+  const toolName = tool.tool || tool.name || 'Tool'
+
+  let inputStr = ''
+  if (typeof input === 'string') {
+    inputStr = input
+  } else if ((input as { command?: string }).command) {
+    inputStr = (input as { command: string }).command
+  } else if (Object.keys(input).length > 0) {
+    inputStr = JSON.stringify(input, null, 2)
+  }
+
+  const outputStr = typeof output === 'string' ? output : JSON.stringify(output, null, 2)
+  const hasOutput = outputStr && outputStr.trim().length > 0
+
+  const statusIcon = {
+    pending: <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />,
+    running: <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-400" />,
+    completed: <Check className="w-3.5 h-3.5 text-emerald-400" />,
+    error: <X className="w-3.5 h-3.5 text-red-400" />,
+  }[status] || <Check className="w-3.5 h-3.5 text-emerald-400" />
+
+  return (
+    <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl overflow-hidden">
+      {/* Header - always visible */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-800/50 transition-colors text-left"
+      >
+        <Terminal className="w-4 h-4 text-zinc-500" />
+        <span className="text-sm font-medium text-zinc-300">{toolName}</span>
+        {title && (
+          <span className="text-xs text-zinc-500 truncate flex-1">{title}</span>
+        )}
+        <div className="flex items-center gap-2">
+          {statusIcon}
+          {expanded ? (
+            <ChevronUp className="w-4 h-4 text-zinc-500" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-zinc-500" />
+          )}
+        </div>
+      </button>
+
+      {/* Expanded content */}
+      {expanded && (
+        <div className="border-t border-zinc-800 px-4 py-3 space-y-3">
+          {inputStr && (
+            <div>
+              <p className="text-[11px] text-zinc-500 uppercase tracking-wide mb-1">Input</p>
+              <pre className="text-sm text-zinc-300 font-mono bg-zinc-950/50 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap">
+                {inputStr}
+              </pre>
+            </div>
+          )}
+          {hasOutput && (
+            <div>
+              <p className="text-[11px] text-zinc-500 uppercase tracking-wide mb-1">Output</p>
+              <pre className="text-sm text-zinc-300 font-mono bg-zinc-950/50 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap max-h-64 overflow-y-auto">
+                {outputStr.slice(0, 2000)}
+                {outputStr.length > 2000 && '\n... (truncated)'}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   )
 }

@@ -51,7 +51,7 @@ make status   # Check supervisorctl status
 | `novnc/` | Custom VNC web interface (`beta.html`) |
 | `config/` | Configuration for openbox, opencode, supervisor, terminal |
 | `config/openbox/` | Window manager config (rc.xml, autostart) |
-| `config/opencode/` | AI agent configuration (opencode.json with system prompt) |
+| `config/opencode/` | OpenCode configuration (permission policy) |
 | `scripts/` | Host-side helpers (vibeos-send, vibeos-screenshot) |
 | `scripts/tools/` | In-container automation scripts (window.sh, screenshot.sh, etc.) |
 | `tests/` | Test suite (remote API tests, automation tests) |
@@ -90,7 +90,7 @@ make status   # Check supervisorctl status
 - `config/supervisord.conf` - Service definitions (opencode, xvfb, openbox, x11vnc, novnc)
 - `config/openbox/rc.xml` - Keyboard shortcuts, window rules
 - `config/openbox/autostart` - Startup script (launches shell-ui)
-- `config/opencode/opencode.json` - AI agent instructions, auto-approve settings
+- `config/opencode/opencode.json` - OpenCode auto-approve settings (no repo-local agents/skills)
 
 ### Custom noVNC
 - `novnc/beta.html` - VibeOS-branded VNC web client with auto-connect
@@ -271,6 +271,8 @@ When updating, add a dated entry in this section:
 - *2026-01-13*: Initial AGENTS.md created with comprehensive documentation
 - *2026-01-13*: Added test infrastructure (tests/ directory), stop button verification, reset session feature with `Super+Shift+R` shortcut and beta.html Reset button
 - *2026-01-13*: **Shell UI Migration to React + Motion** - Complete rewrite of shell-ui from vanilla JS to React 18 + TypeScript + Vite + Tailwind CSS + Motion (Framer Motion). New structure under `shell-ui/src/` with components, hooks, and types. Build command: `npm run build:renderer`. Legacy index.html preserved as `index.html.legacy`.
+- *2026-01-14*: Removed repo-local OpenCode agents/skills (`.opencode/`) and reverted `config/opencode/opencode.json` to auto-approve-only config.
+- *2026-01-14*: Fixed shell UI window/background and layout: enforce fullscreen opaque window, center the chat column, and place input at the bottom with messages above.
 
 ---
 

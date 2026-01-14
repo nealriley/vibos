@@ -1,217 +1,28 @@
-<tasks>
-- Create an AGENTS.md file, which understands this repo, how to run it, and gives strict instructions to update itself as new major changes occur. 
-- We need a basic test strategy - one for performing remote actions that can determine whether our agent and its scripts are working correctly. the other is taking actions within the OS, using mouse and keyboard automation.
-- There should be a 'stop' button which kills (in the opencode 'desktop' session) the current request to the LLM. Write the test, implement any fixes you find are necessary. 
-- We should add a 'reset' configuration to our desktop manager, and we should expose that key command in our beta.html interface. Let's actually use this is as an opportunity to "reset" the current desktop session. this should clear the session entirely and start fresh. Add tests. 
-- we should create an agent descriptor (or Claude skill?) which can interact easily with our running vibos instance. We should provide information about system requirements and other reference to our local documentation. I guess we should also include a local opencode agent which can perform remote actions on behafl of the user and have all the relevant details when it comes to how you develop/enhance this system.
-<investigations>
-- i want to investigate a better UI for our desktop chat. We should research animation libraries and design systems that make a beautiful message/notification interface so we can watch actions fly by!
+<research>
+Our electron interface should be a simple, embedded backdrop that allows a user to interact with opencode, run commands/programs (using they correct key, $ or !). The user provides input, which shows up in a chat-style interface, and any agent responses (including text, tool calls, etc.) should appaear as they happen. Our chat system (opencode) has the ability for external users (via the api) to send messages to the session, those messages, and the response from the agent should show up as well. 
+The interface should be centered horizontally, with the chat input at the bottom of the window, and the messages rising above it. We should be animating the messages coming through, making it easy for a user to see what messages are occurring. 
+We should have a consistent look and feel for our UI. 
+We don't need a title bar or anything like that, we should keep it as simple as we can. 
+We will have two windows, one is the main chat window,the other is an 'always visible' icon on the bottom-left of the window that toggles viewing the chat interface, and the rest of the app windows that appear. 
+<design>
+- Audit our existing setup, look at our attempt, understand what works and what doesn't work. 
+- design a schematic for our main electron app window, including the app scaffolding, our general design approach, the different components we will use, and the ui libraries (e.g. shadcn, shadcn/ui, magicui, etc.). Choose the right tools for the job!
+- document this design thoroughly, vet this design against standards.
+<implementation>
+- create an implementation plan, include: 
+  - all components we need to create, including basic tests
+  - the tasks to remove all of our current main window electron ui
+  - the process of scaffolding our new electron app infrastructure
+  - our testing strategy for building our new electron application
+- The phases of delivery should be
+  - basic app frame rebuilt
+  - adding chat component
+  - adding message (user) components
+  - adding message (agent) components
+  - adding tool calling (agent) components, and similar
+- audit and review for next phases of work
 
-<investigation-plan id="desktop-chat-ui">
-## Shell UI Redesign: React + Motion Animation System
-
-### Research Summary (Completed 2026-01-13)
-Investigated design systems, animation libraries, and frameworks for building a beautiful 
-notification/chat hybrid interface for VibeOS desktop. Decision: React + Motion (Framer Motion)
-with Tailwind CSS for a smooth, professional animation system.
-
-### Selected Stack
-| Layer | Library | Purpose | Size |
-|-------|---------|---------|------|
-| Framework | React 18 + TypeScript | Component architecture | ~42KB |
-| Animation | Motion (Framer Motion) | Smooth transitions, AnimatePresence, layout | ~24KB |
-| Styling | Tailwind CSS v4 | Utility-first, CSS variables | ~10KB |
-| Notifications | Sonner | Toast notifications for system events | ~7KB |
-| UI Primitives | Radix UI | Accessible unstyled components | varies |
-| Build | Vite | Fast HMR, ESM bundling | dev only |
-
-### Key Design Decisions
-
-#### Message Display: Newest-First (Top)
-- Messages appear at TOP of feed, pushing older messages down
-- This notification-style layout matches quick-action watching use case
-- External API messages appear in main feed with visual "external" classifier
-- Layout animations ensure smooth reflow when messages are added
-
-#### Message Auto-Fade
-- Messages slowly fade/shrink over time (long timeout ~5-10 minutes)
-- Keeps interface clean for action-watching
-- Faded messages still visible/expandable on hover
-- Preserves full history in state for scroll-back
-
-#### Animation Patterns by Message Type
-| Type | Animation | Visual Treatment |
-|------|-----------|------------------|
-| AI Response | Spring slide-in from top | Standard bubble |
-| User Input | Quick fade-in | Right-aligned, accent bg |
-| Shell `$` | Terminal-style snap | Monospace, green tint |
-| App Launch `!` | Scale-in like icon | Icon-prefixed card |
-| External API | Slide from right + pulse | "External" badge, distinct border |
-| Tool Execution | Layout accordion | Collapsible with progress |
-
-### Implementation Phases
-
-#### Phase 1: Migration Setup (COMPLETED 2026-01-13)
-- [x] Add React 18 + TypeScript to shell-ui
-- [x] Configure Vite for Electron renderer  
-- [x] Set up Tailwind CSS with existing CSS variables (preserve dark theme)
-- [x] Install Motion and Sonner
-- [x] Create IPC bridge compatibility layer (preserve window.vibeos API)
-- [x] Verify preload.js integration works with React
-
-#### Phase 2: Core Components (COMPLETED 2026-01-13)
-- [x] `<App />` - Root with providers
-- [x] `<MessageFeed />` - Scrollable container with `layoutScroll`
-- [x] `<AnimatedMessage />` - Wrapper with AnimatePresence
-- [x] `<Message />` - Polymorphic component (type-based variants)
-  - [x] `<AIMessage />` - Standard assistant response
-  - [x] `<UserMessage />` - User input display
-  - [ ] `<ShellCommand />` - Terminal-style `$` commands
-  - [ ] `<AppLaunch />` - Icon-prefixed `!` commands
-  - [ ] `<ExternalMessage />` - API-triggered with badge
-- [x] `<PromptInput />` - Input with command detection
-- [x] `<ToolExecution />` - Collapsible accordion with status
-- [x] `<ThinkingIndicator />` - Animated dots
-
-#### Phase 3: Animation System (PARTIAL - 2026-01-13)
-- [x] Message entrance animations (type-specific variants)
-- [ ] Message exit animations (fade-out on scroll/time)
-- [x] Layout animations for sibling reflow
-- [ ] Streaming content height animation
-- [x] Tool execution progress states
-- [x] Auto-fade system (opacity reduces over time) - hook implemented
-
-#### Phase 4: Integration (COMPLETED 2026-01-13)
-- [x] SSE event handling with React state
-- [ ] External API message detection + classifier
-- [x] Session management (reset, abort)
-- [x] Keyboard shortcuts (Ctrl+Shift+R for reset)
-- [x] Stop button functionality
-
-#### Phase 5: Polish (PARTIAL - 2026-01-13)
-- [x] Scroll position management (newest at top)
-- [x] "Load more" for older messages
-- [x] Hover-to-reveal for faded messages (via useAutoFade hook)
-- [ ] Smooth scroll behavior
-- [ ] Performance optimization (virtualization if needed)
-
-### File Structure
-```
-shell-ui/
-├── src/
-│   ├── components/
-│   │   ├── Message/
-│   │   │   ├── index.ts              # Exports
-│   │   │   ├── Message.tsx           # Polymorphic wrapper
-│   │   │   ├── AIMessage.tsx
-│   │   │   ├── UserMessage.tsx  
-│   │   │   ├── ShellCommand.tsx
-│   │   │   ├── AppLaunch.tsx
-│   │   │   ├── ExternalMessage.tsx
-│   │   │   └── variants.ts           # Animation variants
-│   │   ├── Feed/
-│   │   │   ├── MessageFeed.tsx
-│   │   │   └── AnimatedMessage.tsx
-│   │   ├── Input/
-│   │   │   └── PromptInput.tsx
-│   │   ├── Tool/
-│   │   │   └── ToolExecution.tsx
-│   │   ├── Status/
-│   │   │   └── ThinkingIndicator.tsx
-│   │   └── Layout/
-│   │       └── Header.tsx
-│   ├── hooks/
-│   │   ├── useSession.ts
-│   │   ├── useSSE.ts
-│   │   └── useAutoFade.ts
-│   ├── lib/
-│   │   ├── api.ts
-│   │   ├── parseCommand.ts
-│   │   └── cn.ts                     # clsx + tailwind-merge
-│   ├── styles/
-│   │   └── globals.css
-│   ├── types/
-│   │   └── message.ts
-│   ├── App.tsx
-│   └── main.tsx
-├── index.html
-├── package.json
-├── tailwind.config.ts
-├── tsconfig.json
-└── vite.config.ts
-```
-
-### Animation Variants (Reference)
-```typescript
-// src/components/Message/variants.ts
-export const messageVariants = {
-  ai: {
-    initial: { opacity: 0, y: -20 },
-    animate: { opacity: 1, y: 0 },
-    exit: { opacity: 0, y: -10 },
-    transition: { type: "spring", stiffness: 300, damping: 30 }
-  },
-  shell: {
-    initial: { opacity: 0, x: -20 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0 },
-    transition: { duration: 0.15 }
-  },
-  app: {
-    initial: { opacity: 0, scale: 0.8 },
-    animate: { opacity: 1, scale: 1 },
-    exit: { opacity: 0, scale: 0.8 },
-    transition: { type: "spring", stiffness: 400, damping: 25 }
-  },
-  external: {
-    initial: { opacity: 0, x: 100 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: -50 },
-    transition: { type: "spring", stiffness: 200, damping: 20 }
-  },
-  user: {
-    initial: { opacity: 0, scale: 0.95 },
-    animate: { opacity: 1, scale: 1 },
-    exit: { opacity: 0 },
-    transition: { duration: 0.1 }
-  }
-}
-```
-
-### New Dependencies
-```json
-{
-  "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "motion": "^12.0.0",
-    "sonner": "^1.7.0",
-    "@radix-ui/react-scroll-area": "^1.2.0",
-    "clsx": "^2.1.0",
-    "tailwind-merge": "^2.6.0"
-  },
-  "devDependencies": {
-    "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0",
-    "typescript": "^5.6.0",
-    "tailwindcss": "^4.0.0",
-    "vite": "^6.0.0",
-    "@vitejs/plugin-react": "^4.3.0"
-  }
-}
-```
-
-### Open Questions (To Resolve During Implementation)
-1. Icon window (`icon.html`) - keep vanilla or migrate?
-2. TypeScript strict mode from start?
-3. Virtual scrolling needed for very long conversations?
-
-### References
-- Motion AnimatePresence: https://motion.dev/docs/react-animate-presence
-- Motion Layout Animations: https://motion.dev/docs/react-layout-animations
-- Sonner: https://sonner.emilkowal.ski/
-- Radix ScrollArea: https://www.radix-ui.com/primitives/docs/components/scroll-area
-- Tailwind CSS: https://tailwindcss.com/
-
-</investigation-plan> 
- 
+<notes>
+- 2026-01-14: Restored centered chat layout and corrected composition (messages above, input at bottom). Also made the Electron shell window fully opaque/fullscreen to avoid the "floating"/mis-centered look caused by transparent window behavior under Openbox.
+- Remaining polish: tighten vertical padding in the feed/input, and fine-tune max-width/padding for different resolutions.
+</notes>

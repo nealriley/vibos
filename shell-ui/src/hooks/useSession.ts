@@ -18,6 +18,9 @@ interface UseSessionReturn {
   
   // For streaming updates
   updateStreamingPart: (part: MessagePart & { messageID?: string }) => void
+  
+  // Check if a message came from external API
+  isExternalMessage: (messageId: string) => boolean
 }
 
 const MESSAGE_LIMIT = 10
@@ -31,6 +34,9 @@ export function useSession(): UseSessionReturn {
   
   // Track displayed count for pagination
   const displayedCountRef = useRef(MESSAGE_LIMIT)
+  
+  // Track which message IDs came from external API
+  const externalMessageIds = useRef(new Set<string>())
   
   // Initialize session on mount
   useEffect(() => {
@@ -94,9 +100,16 @@ export function useSession(): UseSessionReturn {
           break
         
         case 'message.created': {
-          const msgEvent = event as { properties: { info: { role: string } } }
+          const msgEvent = event as { 
+            properties: { info: { id?: string; role: string } }
+            isExternal?: boolean 
+          }
           if (msgEvent.properties?.info?.role === 'user') {
-            // External message created, refresh
+            // Track if this was an external message
+            if (msgEvent.isExternal && msgEvent.properties?.info?.id) {
+              externalMessageIds.current.add(msgEvent.properties.info.id)
+            }
+            // Refresh to show the new message
             refreshMessages()
           }
           break
@@ -241,6 +254,11 @@ export function useSession(): UseSessionReturn {
     })
   }, [])
   
+  // Check if a message was from external API
+  const isExternalMessage = useCallback((messageId: string): boolean => {
+    return externalMessageIds.current.has(messageId)
+  }, [])
+  
   return {
     status,
     messages,
@@ -250,6 +268,7 @@ export function useSession(): UseSessionReturn {
     sendMessage,
     abort: abortSession,
     reset: resetSession,
-    updateStreamingPart
+    updateStreamingPart,
+    isExternalMessage
   }
 }

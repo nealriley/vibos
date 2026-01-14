@@ -1,76 +1,82 @@
-import type { Variants } from 'motion/react'
+import type { Variants, Transition } from 'motion/react'
 import type { MessageType } from '@/types/message'
 
 /**
- * Animation variants for different message types
- * Each type has a unique entrance animation to help users
- * quickly distinguish between message sources
+ * Animation variants for different message types (top-down flow)
+ * 
+ * With input at TOP and messages flowing DOWN:
+ * - New messages appear at top, slide down into view
+ * - Each type has unique animation for quick visual distinction
  */
 export const messageVariants: Record<MessageType, Variants> = {
-  // AI responses - spring slide from top
+  // AI responses - spring slide down from top
   ai: {
-    initial: { opacity: 0, y: -20 },
-    animate: { opacity: 1, y: 0 },
-    exit: { opacity: 0, y: -10 },
+    initial: { opacity: 0, y: -20, scale: 0.98 },
+    animate: { opacity: 1, y: 0, scale: 1 },
+    exit: { opacity: 0, y: -10, scale: 0.98 },
   },
 
-  // User input - quick fade-in with subtle scale
+  // User input - quick fade-in with subtle scale from right
   user: {
-    initial: { opacity: 0, scale: 0.95 },
-    animate: { opacity: 1, scale: 1 },
-    exit: { opacity: 0 },
+    initial: { opacity: 0, scale: 0.95, x: 10 },
+    animate: { opacity: 1, scale: 1, x: 0 },
+    exit: { opacity: 0, scale: 0.95 },
   },
 
   // Shell commands ($) - terminal-style snap from left
   shell: {
-    initial: { opacity: 0, x: -20 },
+    initial: { opacity: 0, x: -30 },
     animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0 },
+    exit: { opacity: 0, x: -10 },
   },
 
-  // App launches (!) - scale-in like an icon
+  // App launches (!) - bounce-in like launching an app
   app: {
-    initial: { opacity: 0, scale: 0.8 },
-    animate: { opacity: 1, scale: 1 },
+    initial: { opacity: 0, scale: 0.7, y: -10 },
+    animate: { opacity: 1, scale: 1, y: 0 },
     exit: { opacity: 0, scale: 0.8 },
   },
 
-  // External API messages - slide from right with pulse
+  // External API messages - attention-grabbing slide from right
   external: {
-    initial: { opacity: 0, x: 100 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: -50 },
+    initial: { opacity: 0, x: 60, scale: 0.95 },
+    animate: { opacity: 1, x: 0, scale: 1 },
+    exit: { opacity: 0, x: -30 },
   },
 }
 
 /**
  * Transition configs for each message type
  */
-export const messageTransitions: Record<MessageType, object> = {
+export const messageTransitions: Record<MessageType, Transition> = {
   ai: {
     type: 'spring',
-    stiffness: 300,
+    stiffness: 350,
     damping: 30,
   },
 
   user: {
-    duration: 0.1,
+    type: 'spring',
+    stiffness: 500,
+    damping: 35,
   },
 
   shell: {
-    duration: 0.15,
+    type: 'spring',
+    stiffness: 400,
+    damping: 30,
   },
 
   app: {
     type: 'spring',
-    stiffness: 400,
+    stiffness: 450,
     damping: 25,
   },
 
   external: {
     type: 'spring',
-    stiffness: 200,
-    damping: 20,
+    stiffness: 300,
+    damping: 25,
   },
 }
 

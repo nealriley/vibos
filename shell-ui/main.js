@@ -18,6 +18,9 @@ let windowPollInterval = null;
 let commandPollInterval = null;
 let lastWindowList = [];
 
+// Track whether we're expecting a local response (for external message detection)
+let expectingLocalResponse = false;
+
 // Safe logging that won't crash on EPIPE errors
 function safeLog(...args) {
   try {
@@ -222,7 +225,27 @@ function handleServerEvent(event) {
     return;
   }
   
-  // Forward all events to the renderer
+  // Check if this is a user message creation event
+  // If we weren't expecting a local response, it's an external message
+  if (event.type === 'message.created' && event.properties?.info?.role === 'user') {
+    const isExternal = !expectingLocalResponse;
+    expectingLocalResponse = false; // Reset the flag
+    
+    // Add isExternal flag to the event
+    const enrichedEvent = {
+      ...event,
+      isExternal
+    };
+    
+    try {
+      mainWindow.webContents.send('opencode-event', enrichedEvent);
+    } catch (e) {
+      // Ignore send errors
+    }
+    return;
+  }
+  
+  // Forward all other events to the renderer unchanged
   try {
     mainWindow.webContents.send('opencode-event', event);
   } catch (e) {
@@ -626,20 +649,27 @@ function toggleMainWindow() {
 
 // Create the main conversation window
 function createWindow() {
+  const { bounds } = screen.getPrimaryDisplay();
+
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
     frame: false,
-    transparent: true,
+    transparent: false,
     alwaysOnTop: false,
     fullscreen: true,
-    backgroundColor: '#00000000',
+    backgroundColor: '#09090b',
+    show: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
     }
   });
+
+  mainWindow.setMenuBarVisibility(false);
 
   // Load the built React app from dist/, fallback to index.html for dev
   const distIndex = path.join(__dirname, 'dist', 'index.html');
@@ -648,6 +678,14 @@ function createWindow() {
   } else {
     mainWindow.loadFile('index.html');
   }
+
+  // Some Linux WMs ignore fullscreen hints on first map; enforce it after paint.
+  mainWindow.once('ready-to-show', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    mainWindow.setBounds(bounds);
+    mainWindow.setFullScreen(true);
+    mainWindow.show();
+  });
   
   if (config.showDevTools) {
     mainWindow.webContents.openDevTools({ mode: 'detach' });
@@ -704,6 +742,9 @@ ipcMain.handle('submit-input', async (event, input) => {
         return { success: false, error: 'No active session' };
       }
       try {
+        // Mark that we're expecting a local response (for external message detection)
+        expectingLocalResponse = true;
+        
         // Send message to OpenCode synchronously and get response
         const response = await fetch(`${config.opencodeUrl}/session/${currentSessionId}/message`, {
           method: 'POST',
