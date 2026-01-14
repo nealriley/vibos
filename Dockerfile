@@ -143,9 +143,9 @@ RUN mkdir -p \
 # Copy shell-ui application
 COPY --chown=vibe:vibe shell-ui /home/vibe/shell-ui
 
-# Install Electron app dependencies
+# Install Electron app dependencies and build React UI
 WORKDIR /home/vibe/shell-ui
-RUN npm install
+RUN npm install && npm run build:renderer
 
 # Copy configuration files
 COPY --chown=vibe:vibe config/openbox /home/vibe/.config/openbox
@@ -157,9 +157,15 @@ COPY scripts/entrypoint.sh /entrypoint.sh
 # Copy tools scripts
 COPY --chown=vibe:vibe scripts/tools /home/vibe/scripts
 
+# Copy test suite
+COPY --chown=vibe:vibe tests /home/vibe/tests
+
 RUN chmod +x /entrypoint.sh && \
     chmod +x /home/vibe/.config/openbox/autostart && \
-    chmod +x /home/vibe/scripts/*.sh
+    chmod +x /home/vibe/scripts/*.sh && \
+    chmod +x /home/vibe/tests/*.sh && \
+    chmod +x /home/vibe/tests/remote/*.sh && \
+    chmod +x /home/vibe/tests/automation/*.sh
 
 # Fix all permissions
 RUN chown -R vibe:vibe /home/vibe

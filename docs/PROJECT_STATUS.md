@@ -165,6 +165,26 @@ vibeos/
 
 ## Pending / Future Work
 
+### Active Investigation: Shell UI Redesign
+
+> **Status**: Investigation Complete, Implementation Pending  
+> **Reference**: [Shell UI Redesign Technical Reference](reference-shell-ui-redesign.md)  
+> **Full Plan**: [TASKS.md](../TASKS.md)
+
+Migration from vanilla JavaScript to React + Motion animation system:
+
+- [ ] **Phase 1**: Migration Setup (React, Vite, Tailwind)
+- [ ] **Phase 2**: Core Components (Message types, Feed, Input)
+- [ ] **Phase 3**: Animation System (variants, auto-fade, layout)
+- [ ] **Phase 4**: Integration (SSE, session management)
+- [ ] **Phase 5**: Polish (scroll, hover-reveal)
+
+Key features:
+- Newest-first message display (notification-style)
+- Auto-fade messages over time
+- Type-specific animations (`$` shell, `!` app, external API)
+- External API message classifier badge
+
 ### Short-term
 
 - [ ] Desktop icons when main window hidden (PCManFM desktop mode)
