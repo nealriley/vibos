@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import type { Message, ToolPart } from '@/types/message'
 import { parseMarkdown, formatTime } from '@/lib/markdown'
-import { cn } from '@/lib/cn'
 import { ChevronDown, ChevronUp, Terminal, Check, X, Loader2 } from 'lucide-react'
 
 interface AIMessageProps {
@@ -29,48 +28,44 @@ export function AIMessage({ message }: AIMessageProps) {
   }
 
   return (
-    <div className="flex gap-3 group">
-      {/* Avatar */}
-      <div className="h-8 w-8 shrink-0 rounded-full bg-emerald-500/20 flex items-center justify-center">
-        <span className="text-xs font-semibold text-emerald-400">V</span>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 min-w-0 space-y-3">
-        {/* Header */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-zinc-300">VibeOS</span>
-          <span className="text-xs text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity">
-            {formatTime(time)}
-          </span>
+    <div className="w-full bg-zinc-900/20">
+      <div className="flex gap-3 px-5 py-3.5 group">
+        {/* Avatar */}
+        <div className="h-8 w-8 shrink-0 rounded-full bg-emerald-500/10 border border-emerald-400/15 flex items-center justify-center">
+          <span className="text-xs font-semibold text-emerald-300">V</span>
         </div>
 
-        {/* Text content */}
-        {textContent.trim() && (
-          <div
-            className={cn(
-              'bg-zinc-800/50 border border-zinc-700/50 rounded-2xl rounded-tl-md',
-              'px-4 py-3'
-            )}
-          >
+        {/* Content */}
+        <div className="flex-1 min-w-0 space-y-2">
+          {/* Header */}
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] leading-5 font-medium text-zinc-300">VibeOS</span>
+            <span className="text-xs text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity">
+              {formatTime(time)}
+            </span>
+          </div>
+
+          {/* Text content */}
+          {textContent.trim() && (
             <div
-              className="prose-content text-base leading-relaxed"
+              className="prose-content text-[16px] leading-7"
               dangerouslySetInnerHTML={{ __html: parseMarkdown(textContent.trim()) }}
             />
-          </div>
-        )}
+          )}
 
-        {/* Tool calls */}
-        {toolCalls.length > 0 && (
-          <div className="space-y-2">
-            {toolCalls.map((tool, idx) => (
-              <ToolCallDisplay key={tool.id || idx} tool={tool} />
-            ))}
-          </div>
-        )}
+          {/* Tool calls */}
+          {toolCalls.length > 0 && (
+            <div className="space-y-2 pt-1">
+              {toolCalls.map((tool, idx) => (
+                <ToolCallDisplay key={tool.id || idx} tool={tool} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
+
 }
 
 function ToolCallDisplay({ tool }: { tool: ToolPart }) {
@@ -103,14 +98,14 @@ function ToolCallDisplay({ tool }: { tool: ToolPart }) {
   }[status] || <Check className="w-3.5 h-3.5 text-emerald-400" />
 
   return (
-    <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl overflow-hidden">
+    <div className="bg-zinc-900/40 border border-zinc-800/60 rounded-xl overflow-hidden">
       {/* Header - always visible */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-800/50 transition-colors text-left"
+        className="w-full flex items-center gap-3 px-4 py-2 hover:bg-zinc-800/40 transition-colors text-left"
       >
         <Terminal className="w-4 h-4 text-zinc-500" />
-        <span className="text-sm font-medium text-zinc-300">{toolName}</span>
+        <span className="text-[13px] leading-5 font-medium text-zinc-300">{toolName}</span>
         {title && (
           <span className="text-xs text-zinc-500 truncate flex-1">{title}</span>
         )}

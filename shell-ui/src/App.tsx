@@ -139,9 +139,9 @@ export function App() {
 
       {/* Main layout */}
       <main className="flex-1 min-h-0 flex justify-center">
-        <div className="w-full max-w-3xl min-h-0 flex flex-col px-4">
+        <div className="w-full max-w-3xl min-h-0 flex flex-col px-4 sm:px-6 pb-8">
           {/* Message feed - fills remaining space */}
-          <div ref={feedRef} className="flex-1 overflow-y-auto min-h-0 pt-4 pb-2">
+          <div ref={feedRef} className="flex-1 overflow-y-auto min-h-0 pt-6 pb-6">
             {messages.length === 0 && !isBusy ? (
               <div className="min-h-full flex items-center justify-center text-center">
                 <div className="flex flex-col items-center justify-center py-20">
@@ -156,7 +156,7 @@ export function App() {
                 </div>
               </div>
             ) : (
-              <div className="min-h-full flex flex-col justify-end gap-4">
+              <div className="min-h-full flex flex-col justify-end gap-0 divide-y divide-zinc-800/40">
                 {/* Messages */}
                 <AnimatePresence mode="popLayout" initial={false}>
                   {displayMessages.map((msg) => (
@@ -207,15 +207,18 @@ export function App() {
             )}
           </div>
 
+          {/* Separator */}
+          <div className="shrink-0 h-px bg-gradient-to-r from-transparent via-zinc-700/35 to-transparent" />
+
           {/* Input area - BOTTOM */}
-          <div className="shrink-0 pt-2 pb-4">
+          <div className="shrink-0 pt-6 pb-4 bg-gradient-to-t from-zinc-950 via-zinc-950/85 to-transparent">
             <div
               className={cn(
-                'flex items-end gap-2 rounded-2xl border bg-zinc-900 shadow-lg',
+                'flex items-center gap-3 rounded-2xl border bg-zinc-900/70 shadow-lg shadow-black/30',
                 'transition-all duration-200',
                 isBusy
-                  ? 'border-violet-500/50 shadow-violet-500/10'
-                  : 'border-zinc-700/50 focus-within:border-violet-500/50 focus-within:shadow-violet-500/10'
+                  ? 'border-violet-400/35'
+                  : 'border-zinc-700/50 focus-within:border-violet-400/35'
               )}
             >
               <textarea
@@ -228,35 +231,36 @@ export function App() {
                 rows={1}
                 className={cn(
                   'flex-1 min-h-[56px] max-h-[200px] px-5 py-4',
-                  'bg-transparent text-base text-zinc-100',
+                  'bg-transparent text-[16px] text-zinc-100 leading-7',
                   'placeholder:text-zinc-500',
                   'resize-none outline-none',
                   'disabled:opacity-50 disabled:cursor-not-allowed'
                 )}
               />
-              <div className="pr-3 pb-3">
+              <div className="pr-3 py-3">
                 {isBusy ? (
                   <button
                     onClick={handleAbort}
-                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-red-600 hover:bg-red-500 text-white transition-colors"
+                    className="h-11 w-11 flex items-center justify-center rounded-xl bg-red-500/80 hover:bg-red-500 text-white transition-colors"
                     title="Stop (Esc)"
                   >
-                    <Square className="w-4 h-4" />
+                    <Square className="w-5 h-5" />
                   </button>
                 ) : (
                   <button
                     onClick={handleSubmit}
                     disabled={!input.trim() || isDisabled}
-                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="h-11 w-11 flex items-center justify-center rounded-xl bg-violet-500/80 hover:bg-violet-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    title="Send"
                   >
-                    <Send className="w-4 h-4" />
+                    <Send className="w-5 h-5" />
                   </button>
                 )}
               </div>
             </div>
 
             {/* Hints */}
-            <div className="flex items-center justify-center gap-4 text-[11px] text-zinc-500 mt-2">
+            <div className="flex items-center justify-center gap-4 text-[11px] text-zinc-500 mt-3">
               <span><Kbd>Enter</Kbd> send</span>
               <span><Kbd>Shift+Enter</Kbd> new line</span>
               <span><Kbd>!</Kbd> launch app</span>

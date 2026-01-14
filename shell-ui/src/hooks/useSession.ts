@@ -37,6 +37,10 @@ export function useSession(): UseSessionReturn {
   
   // Track which message IDs came from external API
   const externalMessageIds = useRef(new Set<string>())
+
+  // Optimistic user message tracking (pre-refresh)
+  const pendingLocalUserMessageId = useRef<string | null>(null)
+  const pendingLocalUserText = useRef<string | null>(null)
   
   // Initialize session on mount
   useEffect(() => {
@@ -100,18 +104,30 @@ export function useSession(): UseSessionReturn {
           break
         
         case 'message.created': {
-          const msgEvent = event as { 
+          const msgEvent = event as {
             properties: { info: { id?: string; role: string } }
-            isExternal?: boolean 
+            isExternal?: boolean
           }
+
           if (msgEvent.properties?.info?.role === 'user') {
             // Track if this was an external message
             if (msgEvent.isExternal && msgEvent.properties?.info?.id) {
               externalMessageIds.current.add(msgEvent.properties.info.id)
             }
+
+            // If we optimistically rendered the just-submitted prompt,
+            // remove it now that the server has created the real message.
+            if (pendingLocalUserMessageId.current) {
+              const localId = pendingLocalUserMessageId.current
+              setMessages((prev) => prev.filter((m) => m.info.id !== localId))
+              pendingLocalUserMessageId.current = null
+              pendingLocalUserText.current = null
+            }
+
             // Refresh to show the new message
             refreshMessages()
           }
+
           break
         }
       }
@@ -148,29 +164,61 @@ export function useSession(): UseSessionReturn {
     if (status === 'busy') {
       return { success: false, error: 'Session is busy' }
     }
-    
+
+    const trimmed = input.trim()
+
     // Check if it's an OpenCode prompt
-    const isOpencode = !input.trim().startsWith('!') && !input.trim().startsWith('$')
-    
+    const isOpencode = !trimmed.startsWith('!') && !trimmed.startsWith('$')
+
     if (isOpencode) {
+      // Optimistically render the user's prompt immediately.
+      // This avoids a confusing "assistant" avatar flash before refresh.
+      const localId = `local-user-${Date.now()}`
+      pendingLocalUserMessageId.current = localId
+      pendingLocalUserText.current = trimmed
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          info: { id: localId, role: 'user', time: { created: new Date().toISOString() } },
+          parts: [{ type: 'text', text: input }],
+        },
+      ])
+
       setStatus('busy')
       setIsStreaming(true)
     }
-    
+
     try {
       const result = await api.submitInput(input)
       
       if (!result.success) {
         if (isOpencode) {
+          // Roll back optimistic message on failure.
+          if (pendingLocalUserMessageId.current) {
+            const localId = pendingLocalUserMessageId.current
+            setMessages((prev) => prev.filter((m) => m.info.id !== localId))
+            pendingLocalUserMessageId.current = null
+            pendingLocalUserText.current = null
+          }
+
           setStatus('ready')
           setIsStreaming(false)
         }
         return { success: false, error: result.error }
       }
-      
+
       return { success: true, type: result.type }
     } catch (e) {
       if (isOpencode) {
+        // Roll back optimistic message on failure.
+        if (pendingLocalUserMessageId.current) {
+          const localId = pendingLocalUserMessageId.current
+          setMessages((prev) => prev.filter((m) => m.info.id !== localId))
+          pendingLocalUserMessageId.current = null
+          pendingLocalUserText.current = null
+        }
+
         setStatus('ready')
         setIsStreaming(false)
       }
@@ -240,16 +288,31 @@ export function useSession(): UseSessionReturn {
         updated[existingIdx] = msg
         return updated
       } else {
+        const isLikelyUserEcho =
+          part.type === 'text' &&
+          pendingLocalUserText.current &&
+          part.text.trim() === pendingLocalUserText.current
+
+        const role: Message['info']['role'] = isLikelyUserEcho ? 'user' : 'assistant'
+
+        let next = prev
+        if (role === 'user' && pendingLocalUserMessageId.current) {
+          const localId = pendingLocalUserMessageId.current
+          next = prev.filter((m) => m.info.id !== localId)
+          pendingLocalUserMessageId.current = null
+          pendingLocalUserText.current = null
+        }
+
         // Create new message
         const newMsg: Message = {
           info: {
             id: part.messageID!,
-            role: 'assistant',
+            role,
             time: { created: new Date().toISOString() }
           },
           parts: [part]
         }
-        return [...prev, newMsg]
+        return [...next, newMsg]
       }
     })
   }, [])
