@@ -484,28 +484,78 @@
             }
         }
 
-        // Reset session - sends Super+Shift+R key combination via VNC
-        // This triggers the reset handler in the shell-ui
-        function resetSession() {
-            if (rfb) {
-                // Send Super+Shift+R key combination
-                // KeySyms: Super_L=0xffeb, Shift_L=0xffe1, r=0x0072
-                rfb.sendKey(0xffeb, 'Super_L', true);   // Super down
-                rfb.sendKey(0xffe1, 'Shift_L', true);   // Shift down
-                rfb.sendKey(0x0072, 'r', true);         // r down
-                rfb.sendKey(0x0072, 'r', false);        // r up
-                rfb.sendKey(0xffe1, 'Shift_L', false);  // Shift up
-                rfb.sendKey(0xffeb, 'Super_L', false);  // Super up
+        // Screenshot - capture canvas as PNG
+        function takeScreenshot() {
+            if (!rfb) return;
+            
+            // Get the canvas from RFB
+            const canvas = screenEl.querySelector('canvas');
+            if (!canvas) {
+                alert('No canvas found - VNC not connected');
+                return;
+            }
+            
+            try {
+                // Convert canvas to data URL
+                const dataUrl = canvas.toDataURL('image/png');
                 
-                // Show brief confirmation
-                const btn = document.getElementById('reset_btn');
+                // Create download link
+                const link = document.createElement('a');
+                link.download = `vibeos-screenshot-${Date.now()}.png`;
+                link.href = dataUrl;
+                link.click();
+                
+                // Visual feedback
+                const btn = document.getElementById('screenshot_btn');
                 const originalText = btn.textContent;
-                btn.textContent = 'Resetting...';
-                btn.disabled = true;
-                setTimeout(() => {
-                    btn.textContent = originalText;
-                    btn.disabled = false;
-                }, 1500);
+                btn.textContent = 'Saved!';
+                setTimeout(() => { btn.textContent = originalText; }, 1000);
+            } catch (err) {
+                console.error('Screenshot failed:', err);
+                alert('Screenshot failed: ' + err.message);
+            }
+        }
+        
+        // Clipboard - copy VNC clipboard to host
+        function copyClipboard() {
+            if (!rfb) return;
+            
+            // Try to get clipboard from RFB (if supported)
+            // Note: VNC clipboard sync is limited - this copies whatever noVNC has cached
+            const clipboardData = rfb._clipboardText || '';
+            
+            if (clipboardData) {
+                navigator.clipboard.writeText(clipboardData).then(() => {
+                    const btn = document.getElementById('clipboard_btn');
+                    const originalText = btn.textContent;
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => { btn.textContent = originalText; }, 1000);
+                }).catch(err => {
+                    console.error('Clipboard copy failed:', err);
+                    alert('Clipboard copy failed. Browser may not support clipboard API.');
+                });
+            } else {
+                alert('No clipboard data available from VNC session.\\n\\nTip: Select and copy text (Ctrl+C) in the VNC session first.');
+            }
+        }
+        
+        // Send Alt+Tab
+        function sendAltTab() {
+            if (rfb) {
+                // KeySyms: Alt_L=0xffe9, Tab=0xff09
+                rfb.sendKey(0xffe9, 'Alt_L', true);   // Alt down
+                rfb.sendKey(0xff09, 'Tab', true);    // Tab down
+                rfb.sendKey(0xff09, 'Tab', false);   // Tab up
+                rfb.sendKey(0xffe9, 'Alt_L', false); // Alt up
+            }
+        }
+        
+        // Send Super (Windows) key
+        function sendSuper() {
+            if (rfb) {
+                // KeySym: Super_L=0xffeb
+                rfb.sendKey(0xffeb, 'Super_L', true);  // Super down
+                rfb.sendKey(0xffeb, 'Super_L', false); // Super up
             }
         }
 
@@ -513,7 +563,10 @@
         retryBtn.addEventListener('click', retryNow);
         fullscreenBtn.addEventListener('click', toggleFullscreen);
         ctrlAltDelBtn.addEventListener('click', sendCtrlAltDel);
-        document.getElementById('reset_btn').addEventListener('click', resetSession);
+        document.getElementById('screenshot_btn').addEventListener('click', takeScreenshot);
+        document.getElementById('clipboard_btn').addEventListener('click', copyClipboard);
+        document.getElementById('alttab_btn').addEventListener('click', sendAltTab);
+        document.getElementById('super_btn').addEventListener('click', sendSuper);
 
         // Keyboard shortcut: F11 for fullscreen
         document.addEventListener('keydown', (e) => {
@@ -539,7 +592,10 @@
             <span id="status_text">Connecting...</span>
         </div>
         <div id="buttons">
-            <button class="toolbar_btn" id="reset_btn" title="Reset session (Super+Shift+R)">Reset</button>
+            <button class="toolbar_btn" id="screenshot_btn" title="Save screenshot">Screenshot</button>
+            <button class="toolbar_btn" id="clipboard_btn" title="Copy VNC clipboard to host">Clipboard</button>
+            <button class="toolbar_btn" id="alttab_btn" title="Send Alt+Tab">Alt+Tab</button>
+            <button class="toolbar_btn" id="super_btn" title="Send Super/Windows key">Super</button>
             <button class="toolbar_btn" id="fullscreen_btn" title="Fullscreen (F11)">Fullscreen</button>
             <button class="toolbar_btn" id="cad_btn" title="Send Ctrl+Alt+Delete">Ctrl+Alt+Del</button>
         </div>
