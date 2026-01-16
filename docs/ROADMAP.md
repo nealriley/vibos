@@ -448,6 +448,28 @@ Ensure development tools are available:
 - [ ] Add common Python packages (requests, etc.)
 - [ ] Document available development tools
 
+### 7.4 Clipboard CLI Tools
+
+Enable OpenCode/CLI to read and write the X11 clipboard:
+
+**Tasks**:
+- [ ] Install xclip or xsel in Dockerfile
+- [ ] Create `scripts/tools/clipboard-read.sh` - read current clipboard contents
+- [ ] Create `scripts/tools/clipboard-write.sh` - write text to clipboard
+- [ ] Test clipboard tools work with X11 display
+- [ ] Document clipboard usage for AI agent
+
+**Usage Examples**:
+```bash
+# Read clipboard
+clipboard-read.sh
+
+# Write to clipboard
+echo "text to copy" | clipboard-write.sh
+# or
+clipboard-write.sh "text to copy"
+```
+
 ---
 
 ## Phase 8: Deployment Options
