@@ -83,6 +83,12 @@ RUN apt-get update && \
         htop \
         tree \
         ripgrep \
+        # Archive manager
+        xarchiver \
+        unzip \
+        p7zip-full \
+        # Desktop accessories
+        xpad \
         # File manager
         pcmanfm \
         # Text editor

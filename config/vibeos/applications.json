@@ -69,6 +69,18 @@
         "command": "htop",
         "aliases": ["top", "processes", "task-manager"],
         "description": "Interactive process viewer"
+      },
+      "archives": {
+        "command": "xarchiver",
+        "aliases": ["xarchiver", "zip", "unzip", "archive-manager"],
+        "description": "Archive manager (zip, tar, 7z)"
+      }
+    },
+    "accessories": {
+      "notes": {
+        "command": "xpad",
+        "aliases": ["xpad", "sticky-notes", "sticky"],
+        "description": "Sticky notes for desktop"
       }
     },
     "development": {

@@ -38,6 +38,10 @@ You can launch these applications. **Run GUI apps in background** with `&` to av
 - `htop` - Interactive process viewer
 - `tree` - Directory tree
 - `rg` (ripgrep) - Fast recursive search
+- `xarchiver &` - Archive manager (zip, tar, 7z)
+
+### Desktop Accessories
+- `xpad &` - Sticky notes
 
 ### Development
 - `node` / `npm` - Node.js
