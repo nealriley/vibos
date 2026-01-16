@@ -172,6 +172,156 @@
             transform: scale(0.95);
         }
 
+        .toolbar_btn.recording {
+            background: #dc2626;
+            border-color: #dc2626;
+            color: white;
+            animation: pulse-recording 1s infinite;
+        }
+
+        @keyframes pulse-recording {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Command Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal.hidden {
+            display: none;
+        }
+
+        .modal_content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal_header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 500;
+        }
+
+        .modal_close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0 4px;
+        }
+
+        .modal_close:hover {
+            color: var(--text-color);
+        }
+
+        .modal_body {
+            display: flex;
+            gap: 8px;
+            padding: 16px;
+        }
+
+        #cmd_input {
+            flex: 1;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px 12px;
+            color: var(--text-color);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+
+        #cmd_input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .modal_btn {
+            background: var(--accent-gradient);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .modal_btn:hover {
+            opacity: 0.9;
+        }
+
+        .modal_btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .modal_output_wrapper {
+            position: relative;
+            margin: 0 16px 16px;
+            flex: 1;
+            min-height: 150px;
+            max-height: 400px;
+        }
+
+        #cmd_output {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            margin: 0;
+            color: var(--text-color);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            overflow: auto;
+            height: 100%;
+            min-height: 150px;
+            max-height: 400px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .modal_copy {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .modal_copy:hover {
+            background: var(--border-color);
+            color: var(--text-color);
+        }
+
         /* VNC Screen */
         #screen {
             flex: 1;
@@ -296,6 +446,11 @@
         // ====================================================================
         let rfb = null;  // RFB connection instance
         let reconnectTimer = null;
+        
+        // Screen recording state
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let isRecording = false;
         let reconnectAttempts = 0;
         const RECONNECT_DELAY = 3000;
         const MAX_RECONNECT_ATTEMPTS = 50;
@@ -516,6 +671,72 @@
             }
         }
         
+        // Screen Recording - toggle recording on/off
+        function toggleRecording() {
+            const btn = document.getElementById('record_btn');
+            
+            if (!isRecording) {
+                // Start recording
+                const canvas = screenEl.querySelector('canvas');
+                if (!canvas) {
+                    alert('No canvas found - VNC not connected');
+                    return;
+                }
+                
+                try {
+                    // Capture stream from canvas at 30fps
+                    const stream = canvas.captureStream(30);
+                    
+                    // Create MediaRecorder with webm format
+                    const options = { mimeType: 'video/webm;codecs=vp9' };
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        options.mimeType = 'video/webm';
+                    }
+                    
+                    mediaRecorder = new MediaRecorder(stream, options);
+                    recordedChunks = [];
+                    
+                    mediaRecorder.ondataavailable = (e) => {
+                        if (e.data.size > 0) {
+                            recordedChunks.push(e.data);
+                        }
+                    };
+                    
+                    mediaRecorder.onstop = () => {
+                        // Create blob and download
+                        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.download = `vibeos-recording-${Date.now()}.webm`;
+                        link.href = url;
+                        link.click();
+                        URL.revokeObjectURL(url);
+                        
+                        // Reset state
+                        recordedChunks = [];
+                        mediaRecorder = null;
+                    };
+                    
+                    mediaRecorder.start(1000); // Collect data every second
+                    isRecording = true;
+                    btn.textContent = 'Stop Rec';
+                    btn.classList.add('recording');
+                    
+                } catch (err) {
+                    console.error('Recording failed:', err);
+                    alert('Recording failed: ' + err.message);
+                }
+            } else {
+                // Stop recording
+                if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                    mediaRecorder.stop();
+                }
+                isRecording = false;
+                btn.textContent = 'Record';
+                btn.classList.remove('recording');
+            }
+        }
+        
         // Send Alt+Tab
         function sendAltTab() {
             if (rfb) {
@@ -536,13 +757,133 @@
             }
         }
 
+        // Command Modal - execute commands via OpenCode API
+        const cmdModal = document.getElementById('cmd_modal');
+        const cmdInput = document.getElementById('cmd_input');
+        const cmdOutput = document.getElementById('cmd_output');
+        const cmdSessionId = { current: null };
+        
+        function openCmdModal() {
+            cmdModal.classList.remove('hidden');
+            cmdInput.value = '';
+            cmdOutput.textContent = 'Enter a command and click Run';
+            cmdInput.focus();
+        }
+        
+        function closeCmdModal() {
+            cmdModal.classList.add('hidden');
+        }
+        
+        async function runCommand() {
+            const command = cmdInput.value.trim();
+            if (!command) return;
+            
+            const runBtn = document.getElementById('cmd_run');
+            runBtn.disabled = true;
+            runBtn.textContent = 'Running...';
+            cmdOutput.textContent = 'Executing command...';
+            
+            try {
+                // Create a new session for this command
+                const sessionRes = await fetch('http://localhost:4096/session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: 'Command: ' + command.substring(0, 30) })
+                });
+                const session = await sessionRes.json();
+                cmdSessionId.current = session.id;
+                
+                // Send the command with structured prompt
+                const prompt = `Run this exact command and output ONLY the raw result with no explanation or markdown formatting:\n\n${command}`;
+                
+                await fetch(`http://localhost:4096/session/${session.id}/message`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: prompt })
+                });
+                
+                // Poll for completion
+                let attempts = 0;
+                const maxAttempts = 60;
+                
+                const pollInterval = setInterval(async () => {
+                    attempts++;
+                    
+                    try {
+                        const statusRes = await fetch(`http://localhost:4096/session/${session.id}`);
+                        const statusData = await statusRes.json();
+                        
+                        if (statusData.status === 'idle' || attempts >= maxAttempts) {
+                            clearInterval(pollInterval);
+                            
+                            // Get messages
+                            const msgRes = await fetch(`http://localhost:4096/session/${session.id}/message`);
+                            const messages = await msgRes.json();
+                            
+                            // Find the assistant's response
+                            const assistantMsg = messages.filter(m => m.role === 'assistant').pop();
+                            if (assistantMsg && assistantMsg.content) {
+                                // Extract text content
+                                let output = '';
+                                for (const part of assistantMsg.content) {
+                                    if (part.type === 'text') {
+                                        output += part.text;
+                                    } else if (part.type === 'tool_use' && part.name === 'bash') {
+                                        // Show bash command that was run
+                                        output += `$ ${part.input?.command || ''}\n`;
+                                    } else if (part.type === 'tool_result') {
+                                        output += part.content + '\n';
+                                    }
+                                }
+                                cmdOutput.textContent = output.trim() || 'Command completed (no output)';
+                            } else {
+                                cmdOutput.textContent = 'No response received';
+                            }
+                            
+                            runBtn.disabled = false;
+                            runBtn.textContent = 'Run';
+                        }
+                    } catch (pollErr) {
+                        console.error('Poll error:', pollErr);
+                    }
+                }, 500);
+                
+            } catch (err) {
+                console.error('Command failed:', err);
+                cmdOutput.textContent = 'Error: ' + err.message;
+                runBtn.disabled = false;
+                runBtn.textContent = 'Run';
+            }
+        }
+        
+        function copyOutput() {
+            const text = cmdOutput.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = document.getElementById('cmd_copy');
+                const orig = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = orig; }, 1000);
+            }).catch(err => {
+                console.error('Copy failed:', err);
+            });
+        }
+
         // Button handlers
         retryBtn.addEventListener('click', retryNow);
         fullscreenBtn.addEventListener('click', toggleFullscreen);
         ctrlAltDelBtn.addEventListener('click', sendCtrlAltDel);
         document.getElementById('screenshot_btn').addEventListener('click', takeScreenshot);
+        document.getElementById('record_btn').addEventListener('click', toggleRecording);
         document.getElementById('alttab_btn').addEventListener('click', sendAltTab);
         document.getElementById('super_btn').addEventListener('click', sendSuper);
+        document.getElementById('cmd_btn').addEventListener('click', openCmdModal);
+        document.getElementById('cmd_close').addEventListener('click', closeCmdModal);
+        document.getElementById('cmd_run').addEventListener('click', runCommand);
+        document.getElementById('cmd_copy').addEventListener('click', copyOutput);
+        cmdInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') runCommand();
+            if (e.key === 'Escape') closeCmdModal();
+        });
 
         // Keyboard shortcut: F11 for fullscreen
         document.addEventListener('keydown', (e) => {
@@ -569,8 +910,10 @@
         </div>
         <div id="buttons">
             <button class="toolbar_btn" id="screenshot_btn" title="Save screenshot">Screenshot</button>
+            <button class="toolbar_btn" id="record_btn" title="Start/stop screen recording">Record</button>
             <button class="toolbar_btn" id="alttab_btn" title="Send Alt+Tab">Alt+Tab</button>
             <button class="toolbar_btn" id="super_btn" title="Send Super/Windows key">Super</button>
+            <button class="toolbar_btn" id="cmd_btn" title="Run a command">Run Cmd</button>
             <button class="toolbar_btn" id="fullscreen_btn" title="Fullscreen (F11)">Fullscreen</button>
             <button class="toolbar_btn" id="cad_btn" title="Send Ctrl+Alt+Delete">Ctrl+Alt+Del</button>
         </div>
@@ -589,6 +932,23 @@
                 <div class="spinner_dot"></div>
             </div>
             <button class="overlay_btn" id="retry_btn">Retry Now</button>
+        </div>
+    </div>
+
+    <div id="cmd_modal" class="modal hidden">
+        <div class="modal_content">
+            <div class="modal_header">
+                <span>Run Command</span>
+                <button class="modal_close" id="cmd_close">&times;</button>
+            </div>
+            <div class="modal_body">
+                <input type="text" id="cmd_input" placeholder="Enter command (e.g., ls -la, htop, window-list.sh)" autocomplete="off">
+                <button class="modal_btn" id="cmd_run">Run</button>
+            </div>
+            <div class="modal_output_wrapper">
+                <pre id="cmd_output"></pre>
+                <button class="modal_copy" id="cmd_copy" title="Copy to clipboard">Copy</button>
+            </div>
         </div>
     </div>
 </body>
