@@ -173,6 +173,7 @@ The shell UI supports special prefixes:
 | `Super+Return` | Open terminal |
 | `Super+B` | Open browser |
 | `Super+Shift+R` | Reset desktop session |
+| `Ctrl+Shift+T` | Open template selector |
 | `Alt+F4` | Close window |
 | `Alt+Tab` | Cycle windows |
 | `Super+F` | Toggle fullscreen |
@@ -287,6 +288,7 @@ When updating, add a dated entry in this section:
 - *2026-01-16*: **Phase 4 noVNC Complete** - Replaced Reset button with Screenshot, Alt+Tab, and Super key toolbar buttons. Clipboard button deferred (noVNC clipboard event not firing reliably with x11vnc). Added clipboard CLI tools (`clipboard-read.sh`, `clipboard-write.sh`).
 - *2026-01-16*: **Phase 6-7 Complete** - Added OS enhancements (ffmpeg, feh, evince, htop, tree, ripgrep). Created `applications.json` registry mapping friendly app names to commands. Added `/home/vibe/AGENTS.md` for opencode context with available apps, automation scripts, and best practices.
 - *2026-01-16*: **Additional Features** - Added xarchiver (archive manager) and xpad (sticky notes). Added screen recording button to noVNC toolbar (saves WebM). Added "Run Cmd" button for executing commands via OpenCode API with copyable output modal. Streamlined ROADMAP.md (moved completed work to CHANGELOG.md). Updated PROJECT_STATUS.md with current state.
+- *2026-01-16*: **Phase 5 Template System** - Implemented shell UI template system. Created `templates/` directory with type definitions, registry, and two templates (default, minimal). Added `TemplateSelector` modal (`Ctrl+Shift+T`). Templates receive session state via `TemplateProps` interface and can render any UI. Template selection persisted in localStorage.
 
 ---
 
