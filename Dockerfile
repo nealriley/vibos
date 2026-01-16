@@ -72,6 +72,9 @@ RUN apt-get update && \
         # Window automation tools
         xdotool \
         wmctrl \
+        # Clipboard tools
+        xclip \
+        xsel \
         # File manager
         pcmanfm \
         # Text editor
