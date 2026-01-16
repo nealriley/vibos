@@ -14,7 +14,7 @@ const {
   createSession,
   opencodeRequest
 } = require('./api-client');
-const { subscribeToEvents, setExpectingLocalResponse } = require('./sse-handler');
+const { subscribeToEvents, setExpectingLocalResponse, getConnectionStatus } = require('./sse-handler');
 const { getMainWindow, toggleMainWindow } = require('./window-manager');
 const { launchApp, launchTerminal, parseInput } = require('./launcher');
 const { focusWindowById, closeWindowById } = require('./polling');
@@ -191,6 +191,11 @@ function registerIpcHandlers() {
   // Get config for renderer
   ipcMain.handle('get-config', async () => {
     return config;
+  });
+
+  // Get current connection status
+  ipcMain.handle('get-connection-status', () => {
+    return getConnectionStatus();
   });
 
   // Toggle main window (from icon click)

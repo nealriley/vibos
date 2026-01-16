@@ -97,6 +97,27 @@ contextBridge.exposeInMainWorld('vibeos', {
     ipcRenderer.on('session-reset', () => callback());
   },
   
+  /**
+   * Get current SSE connection status
+   * @returns {Promise<'connected' | 'disconnected' | 'reconnecting'>}
+   */
+  getConnectionStatus: () => ipcRenderer.invoke('get-connection-status'),
+  
+  /**
+   * Subscribe to connection status changes
+   * @param {function} callback - Called with status ('connected' | 'disconnected' | 'reconnecting')
+   */
+  onConnectionStatus: (callback) => {
+    ipcRenderer.on('connection-status', (event, status) => callback(status));
+  },
+  
+  /**
+   * Remove connection status listener
+   */
+  removeConnectionStatusListener: () => {
+    ipcRenderer.removeAllListeners('connection-status');
+  },
+  
   // ============================================================================
   // Icon/Taskbar Window API - Used by icon.html
   // ============================================================================

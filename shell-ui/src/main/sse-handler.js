@@ -9,6 +9,8 @@ const { config, safeLog } = require('./config');
 let eventSource = null;
 let expectingLocalResponse = false;
 let onEventCallback = null;
+let onConnectionStatusCallback = null;
+let connectionStatus = 'disconnected'; // 'connected' | 'disconnected' | 'reconnecting'
 
 /**
  * Set the callback for handling events
@@ -16,6 +18,34 @@ let onEventCallback = null;
  */
 function setEventCallback(callback) {
   onEventCallback = callback;
+}
+
+/**
+ * Set the callback for connection status changes
+ * @param {Function} callback - Function to call with status ('connected' | 'disconnected' | 'reconnecting')
+ */
+function setConnectionStatusCallback(callback) {
+  onConnectionStatusCallback = callback;
+}
+
+/**
+ * Update and emit connection status
+ */
+function updateConnectionStatus(status) {
+  if (connectionStatus !== status) {
+    connectionStatus = status;
+    safeLog('SSE connection status:', status);
+    if (onConnectionStatusCallback) {
+      onConnectionStatusCallback(status);
+    }
+  }
+}
+
+/**
+ * Get current connection status
+ */
+function getConnectionStatus() {
+  return connectionStatus;
 }
 
 /**
@@ -70,6 +100,8 @@ function subscribeToEvents() {
     eventSource = null;
   }
   
+  updateConnectionStatus('reconnecting');
+  
   const url = `${config.opencodeUrl}/event`;
   safeLog('Subscribing to OpenCode events:', url);
   
@@ -77,6 +109,7 @@ function subscribeToEvents() {
   
   eventSource.onopen = () => {
     safeLog('SSE connection opened');
+    updateConnectionStatus('connected');
   };
   
   eventSource.onmessage = (event) => {
@@ -89,9 +122,11 @@ function subscribeToEvents() {
   };
   
   eventSource.onerror = () => {
+    updateConnectionStatus('disconnected');
     eventSource.close();
     eventSource = null;
     // Reconnect after a delay
+    updateConnectionStatus('reconnecting');
     setTimeout(() => subscribeToEvents(), 3000);
   };
 }
@@ -115,6 +150,8 @@ function isConnected() {
 
 module.exports = {
   setEventCallback,
+  setConnectionStatusCallback,
+  getConnectionStatus,
   setExpectingLocalResponse,
   isExpectingLocalResponse,
   subscribeToEvents,

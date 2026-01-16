@@ -16,7 +16,13 @@ if (process.env.ELECTRON_DISABLE_SANDBOX === '1') {
 
 // Import modules
 const { safeLog } = require('./src/main/config');
-const { setEventCallback, subscribeToEvents, closeEventSource } = require('./src/main/sse-handler');
+const { 
+  setEventCallback, 
+  setConnectionStatusCallback,
+  getConnectionStatus,
+  subscribeToEvents, 
+  closeEventSource 
+} = require('./src/main/sse-handler');
 const { 
   createMainWindow, 
   createIconWindow, 
@@ -50,6 +56,22 @@ function handleOpencodeEvent(event) {
 }
 
 /**
+ * Handle connection status changes - forward to renderer
+ */
+function handleConnectionStatus(status) {
+  const mainWindow = getMainWindow();
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+  
+  try {
+    mainWindow.webContents.send('connection-status', status);
+  } catch (e) {
+    // Ignore send errors (window may be closing)
+  }
+}
+
+/**
  * Handle command signals from external sources (e.g., beta.html)
  */
 async function handleCommandSignal(command) {
@@ -74,6 +96,9 @@ async function handleCommandSignal(command) {
 function initializeApp() {
   // Set up SSE event forwarding
   setEventCallback(handleOpencodeEvent);
+  
+  // Set up connection status forwarding
+  setConnectionStatusCallback(handleConnectionStatus);
   
   // Set up command signal handling
   setCommandCallback(handleCommandSignal);
