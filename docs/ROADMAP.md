@@ -1,331 +1,16 @@
 # VibeOS Development Roadmap
 
-> **Version**: 2.0 Planning  
-> **Created**: January 16, 2026  
-> **Status**: Active Planning
+> **Version**: 2.1  
+> **Updated**: January 16, 2026  
+> **Status**: Active Development
 
-## Executive Summary
+## Overview
 
-This roadmap outlines the development phases for VibeOS, covering:
+This roadmap outlines **future development phases** for VibeOS. For completed work, see [CHANGELOG.md](CHANGELOG.md).
 
-- **Phases 1-3**: Code organization, architecture improvements, and testing
-- **Phases 4-5**: noVNC web interface and shell UI template system
-- **Phases 6-7**: OpenCode agent improvements and OS enhancements
-- **Phases 8-9**: Deployment options (Raspberry Pi, ISO) and onboarding
-- **Phases 10-11**: Security, production readiness, and additional features
+**Completed phases**: 1-4, 6-7 (Code organization, architecture, testing, noVNC improvements, agent context, OS enhancements)
 
-The goal is to prepare the codebase for scaling, improve user experience, expand deployment options, and enable easier maintenance.
-
----
-
-## Current State Assessment
-
-### Strengths
-
-1. **Functional Core**: Container, display stack, AI integration all working
-2. **Modern UI**: React + TypeScript + Motion animation system
-3. **Good Documentation**: Diataxis-structured docs, AGENTS.md for AI
-4. **Automation Tools**: Comprehensive window/mouse control scripts
-5. **Test Infrastructure**: Framework in place for remote and automation tests
-
-### Areas for Improvement
-
-1. **Monolithic Main Process**: `main.js` (900 lines) handles too many concerns
-2. **Tight Coupling**: Shell UI tightly coupled to specific API implementation
-3. **Code Duplication**: Window scripts share logic but don't share code
-4. **Missing Abstractions**: No unified client library, event bus, or state machine
-5. **Limited Testing**: Unit tests for hooks/components not implemented
-6. **Security**: No authentication, auto-approve everything
-
----
-
-## Phase 1: Code Organization & Cleanup
-
-**Timeline**: 1-2 weeks  
-**Priority**: High
-
-### 1.1 Shell UI Main Process Modularization
-
-Split `shell-ui/main.js` into focused modules:
-
-```
-shell-ui/
-├── main.js                 # Entry point, orchestration only
-├── src/
-│   └── main/               # Main process modules
-│       ├── api-client.js   # OpenCode HTTP client
-│       ├── sse-handler.js  # SSE subscription & event handling
-│       ├── window-manager.js # Icon/main window management
-│       ├── ipc-handlers.js # IPC handler registration
-│       ├── polling.js      # Window & command polling
-│       └── config.js       # Configuration management
-```
-
-**Tasks**:
-- [ ] Extract OpenCode API client to `api-client.js`
-- [ ] Extract SSE handling to `sse-handler.js`
-- [ ] Extract window creation/management to `window-manager.js`
-- [ ] Extract IPC handlers to `ipc-handlers.js`
-- [ ] Extract polling logic to `polling.js`
-- [ ] Create config module with centralized constants
-- [ ] Update main.js to orchestrate modules
-
-### 1.2 Remove Unused Code
-
-- [ ] Remove or integrate `useAutoFade` hook
-- [ ] Remove `lib/parseCommand.ts` (duplicates main.js logic)
-- [ ] Audit and remove unused CSS classes
-- [ ] Remove or document unused config directories (labwc, foot, alacritty)
-
-### 1.3 Create Shared Automation Library
-
-Extract common window-finding logic:
-
-```
-scripts/tools/
-├── lib/
-│   └── window-utils.sh    # Shared functions
-├── window.sh              # Uses lib/window-utils.sh
-├── window-focus.sh        # Uses lib/window-utils.sh
-└── ...
-```
-
-**Tasks**:
-- [ ] Create `lib/window-utils.sh` with `find_window()` function
-- [ ] Update all window scripts to source the library
-- [ ] Add error handling and logging utilities
-
----
-
-## Phase 2: Architecture Improvements
-
-**Timeline**: 2-3 weeks  
-**Priority**: High
-
-### 2.1 Unified Event Bus
-
-Create a centralized event system for the React app:
-
-```typescript
-// src/lib/event-bus.ts
-type EventMap = {
-  'session:status': { type: 'busy' | 'idle' }
-  'message:created': Message
-  'message:updated': { messageId: string; part: MessagePart }
-  'connection:status': 'connected' | 'disconnected' | 'reconnecting'
-}
-
-const eventBus = createEventBus<EventMap>()
-```
-
-**Benefits**:
-- Single subscription point
-- Type-safe event handling
-- Eliminates useSession/useSSE overlap
-- Easier testing with mock bus
-
-**Tasks**:
-- [ ] Design event bus API
-- [ ] Implement event bus with TypeScript generics
-- [ ] Migrate useSession to use event bus
-- [ ] Migrate useSSE to use event bus
-- [ ] Add connection status events
-
-### 2.2 OpenCode Client Library
-
-Create a reusable, testable API client:
-
-```typescript
-// src/lib/opencode-client.ts
-class OpenCodeClient {
-  constructor(config: OpenCodeConfig)
-  
-  // Session management
-  async createSession(title: string): Promise<Session>
-  async getSession(id: string): Promise<Session>
-  async listSessions(): Promise<Session[]>
-  
-  // Messages
-  async sendMessage(sessionId: string, text: string): Promise<void>
-  async getMessages(sessionId: string): Promise<Message[]>
-  async abort(sessionId: string): Promise<void>
-  
-  // Events
-  subscribeToEvents(handler: EventHandler): () => void
-}
-```
-
-**Benefits**:
-- Reusable in main process and tests
-- Mockable for unit tests
-- Clear API contract
-
-**Tasks**:
-- [ ] Design OpenCodeClient interface
-- [ ] Implement client class
-- [ ] Add retry logic and error handling
-- [ ] Create mock client for testing
-- [ ] Migrate main.js to use client
-- [ ] Migrate tests to use client
-
-### 2.3 React Error Boundary
-
-Add error boundary for graceful failure:
-
-```typescript
-// src/components/ErrorBoundary.tsx
-class ErrorBoundary extends React.Component {
-  state = { hasError: false, error: null }
-  
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error }
-  }
-  
-  render() {
-    if (this.state.hasError) {
-      return <ErrorFallback error={this.state.error} onRetry={...} />
-    }
-    return this.props.children
-  }
-}
-```
-
-**Tasks**:
-- [ ] Create ErrorBoundary component
-- [ ] Create ErrorFallback UI
-- [ ] Wrap App with ErrorBoundary
-- [ ] Add error reporting/logging
-
-### 2.4 Connection Status Indicator
-
-Add visual indicator for API/SSE connection:
-
-```typescript
-// src/components/ConnectionStatus.tsx
-function ConnectionStatus() {
-  const { status } = useConnectionStatus()
-  
-  return (
-    <div className={cn(
-      'w-2 h-2 rounded-full',
-      status === 'connected' && 'bg-green-500',
-      status === 'reconnecting' && 'bg-yellow-500 animate-pulse',
-      status === 'disconnected' && 'bg-red-500'
-    )} />
-  )
-}
-```
-
-**Tasks**:
-- [ ] Create useConnectionStatus hook
-- [ ] Track SSE connection state in main.js
-- [ ] Forward connection events via IPC
-- [ ] Create ConnectionStatus component
-- [ ] Add to App UI
-
----
-
-## Phase 3: Testing & Quality
-
-**Timeline**: 1-2 weeks  
-**Priority**: Medium
-
-### 3.1 Unit Tests for Hooks
-
-Add test coverage for custom hooks:
-
-```typescript
-// src/hooks/__tests__/useSession.test.ts
-describe('useSession', () => {
-  it('initializes session on mount')
-  it('handles optimistic message rendering')
-  it('detects external messages')
-  it('handles streaming updates')
-  it('rolls back on error')
-})
-```
-
-**Tasks**:
-- [ ] Set up testing environment (Vitest + React Testing Library)
-- [ ] Write tests for useSession
-- [ ] Write tests for useSSE
-- [ ] Write tests for useAutoFade (if kept)
-- [ ] Add test scripts to package.json
-
-### 3.2 Component Tests
-
-Test React components:
-
-```typescript
-// src/components/__tests__/Message.test.tsx
-describe('Message', () => {
-  it('renders user message correctly')
-  it('renders AI message with tool calls')
-  it('renders external message with badge')
-  it('renders shell command message')
-})
-```
-
-**Tasks**:
-- [ ] Write tests for Message components
-- [ ] Write tests for App component
-- [ ] Write tests for input handling
-- [ ] Set up visual regression testing (optional)
-
-### 3.3 Integration Tests
-
-Expand test coverage:
-
-**Tasks**:
-- [ ] Add IPC communication tests
-- [ ] Add main process unit tests
-- [ ] Improve remote API test coverage
-- [ ] Add CI/CD pipeline configuration
-
----
-
-## Phase 4: noVNC & Web Interface
-
-**Timeline**: 1 week  
-**Priority**: Medium
-
-### 4.1 Screenshot Capability
-
-Add ability to capture canvas element as image:
-
-**Tasks**:
-- [x] Research canvas-to-image export methods
-- [x] Add screenshot button to beta.html toolbar
-- [x] Implement download functionality (PNG with timestamp)
-- [x] Test across browsers
-
-### 4.2 Clipboard Integration (Deferred)
-
-Pull clipboard contents from VNC session:
-
-**Status**: Deferred - noVNC clipboard event not firing reliably with x11vnc. Needs investigation into x11vnc CLIPBOARD/PRIMARY selection sync or alternative approach.
-
-**Tasks**:
-- [x] Research noVNC clipboard API
-- [ ] Investigate x11vnc clipboard sync configuration
-- [ ] Add "Copy from VNC" button to toolbar
-- [ ] Auto-copy to host clipboard on click
-- [ ] Show feedback notification on success
-
-### 4.3 Key Command Buttons
-
-Send special key combinations to VNC:
-
-**Tasks**:
-- [x] Add Alt+Tab button
-- [x] Add Super (Windows) key button
-- [x] Ctrl+Alt+Delete button (already existed)
-
-### 4.4 UI Cleanup
-
-- [x] Remove non-functioning 'Reset' button
-- [x] Clean up toolbar layout
-- [x] Add tooltips to buttons
+**Remaining phases**: 5, 8-11 (Templates, deployment, onboarding, security, additional features)
 
 ---
 
@@ -338,7 +23,6 @@ Send special key combinations to VNC:
 
 Allow cycling through different UI templates:
 
-**Tasks**:
 - [ ] Design template switching mechanism
 - [ ] Create template configuration file
 - [ ] Add runtime template selection
@@ -348,7 +32,6 @@ Allow cycling through different UI templates:
 
 Let users choose their preferred interface:
 
-**Tasks**:
 - [ ] Add template selector to settings/menu
 - [ ] Show template previews
 - [ ] Remember user's template preference
@@ -358,7 +41,6 @@ Let users choose their preferred interface:
 
 Integrate existing chat UI templates:
 
-**Tasks**:
 - [ ] Research open-source chat UI templates (React/Electron)
 - [ ] Evaluate AI-focused chat templates
 - [ ] Port one template as proof-of-concept
@@ -368,109 +50,10 @@ Integrate existing chat UI templates:
 
 Enable swapping UI while preserving functionality:
 
-**Tasks**:
 - [ ] Define template interface contract
 - [ ] Create adapter layer for OpenCode API
 - [ ] Document required hooks/methods for templates
 - [ ] Create template starter kit
-
----
-
-## Phase 6: OpenCode Agent Improvements
-
-**Timeline**: 1 week  
-**Priority**: Medium
-
-### 6.1 System Prompt Enhancement
-
-Improve agent behavior and tone:
-
-**Tasks**:
-- [x] Update system prompt for background app execution (via AGENTS.md)
-- [x] Add service-focused, encouraging tone
-- [x] Include guidance on product usage
-- [x] Test prompt changes with various queries
-
-### 6.2 Application Registry
-
-Create predefined list of available applications:
-
-**Tasks**:
-- [x] Create `/home/vibe/.config/vibeos/applications.json`
-- [x] Map friendly names to commands (Chrome → google-chrome)
-- [ ] Auto-generate from Dockerfile installed packages (deferred)
-- [x] Include in system prompt context
-- [x] Copy from source on container build
-
-### 6.3 Agent Context
-
-Provide agent with environment awareness:
-
-**Tasks**:
-- [x] Include available applications in context (AGENTS.md)
-- [x] Add current working directory info
-- [x] Include automation scripts list
-- [x] Provide system capabilities summary
-
----
-
-## Phase 7: Operating System Enhancements
-
-**Timeline**: 1 week  
-**Priority**: Low-Medium
-
-### 7.1 Media Tools
-
-Install media handling applications:
-
-**Tasks**:
-- [x] Add ffmpeg to Dockerfile
-- [x] Add a PDF viewer (evince)
-- [x] Add an image viewer (feh)
-- [x] Test all tools work in container
-
-### 7.2 CLI Tools
-
-Install useful command-line utilities:
-
-**Tasks**:
-- [x] Add htop for system monitoring
-- [x] Add ripgrep (rg) for fast searching
-- [x] Verify git is installed and configured
-- [x] Add ssh-client for remote connections (openssh-server already present)
-- [x] Add common utilities (tree, jq, curl, wget)
-
-### 7.3 Development Environment
-
-Ensure development tools are available:
-
-**Tasks**:
-- [x] Verify Node.js is installed (already present)
-- [x] Add Python 3 with pip (already present)
-- [ ] Add common Python packages (requests, etc.) - deferred
-- [x] Document available development tools (in AGENTS.md)
-
-### 7.4 Clipboard CLI Tools
-
-Enable OpenCode/CLI to read and write the X11 clipboard:
-
-**Tasks**:
-- [x] Install xclip and xsel in Dockerfile
-- [x] Create `scripts/tools/clipboard-read.sh` - read current clipboard contents
-- [x] Create `scripts/tools/clipboard-write.sh` - write text to clipboard
-- [x] Test clipboard tools work with X11 display
-- [x] Document clipboard usage for AI agent (in AGENTS.md)
-
-**Usage Examples**:
-```bash
-# Read clipboard
-clipboard-read.sh
-
-# Write to clipboard
-echo "text to copy" | clipboard-write.sh
-# or
-clipboard-write.sh "text to copy"
-```
 
 ---
 
@@ -483,7 +66,6 @@ clipboard-write.sh "text to copy"
 
 Ensure builds share common foundation:
 
-**Tasks**:
 - [ ] Identify Docker-specific code to abstract
 - [ ] Create shared configuration layer
 - [ ] Document architecture for multi-target builds
@@ -493,7 +75,6 @@ Ensure builds share common foundation:
 
 Create ARM64 build for Raspberry Pi:
 
-**Tasks**:
 - [ ] Research Pi-specific requirements
 - [ ] Create ARM64 Dockerfile or build script
 - [ ] Test on Raspberry Pi 4/5
@@ -504,7 +85,6 @@ Create ARM64 build for Raspberry Pi:
 
 Create installable OS image:
 
-**Tasks**:
 - [ ] Research Linux live CD/installer creation
 - [ ] Evaluate tools (Ubuntu Customization Kit, etc.)
 - [ ] Create minimal base system specification
@@ -523,7 +103,6 @@ Create installable OS image:
 
 Create onboarding assistant interface:
 
-**Tasks**:
 - [ ] Design onboarding conversation flow
 - [ ] Create onboarding-specific shell template
 - [ ] Script welcome messages and guidance
@@ -533,7 +112,6 @@ Create onboarding assistant interface:
 
 Guide users through key features:
 
-**Tasks**:
 - [ ] Create tutorial prompts (try !chrome, try $ls)
 - [ ] Show keyboard shortcut hints
 - [ ] Demonstrate AI capabilities
@@ -543,7 +121,6 @@ Guide users through key features:
 
 Show onboarding only for new users:
 
-**Tasks**:
 - [ ] Detect first-run state
 - [ ] Store onboarding completion flag
 - [ ] Allow re-running onboarding from settings
@@ -560,16 +137,12 @@ Show onboarding only for new users:
 
 Add optional authentication for OpenCode API:
 
-```typescript
-// Environment variables
+```bash
+# Environment variables
 OPENCODE_AUTH_ENABLED=true
 OPENCODE_AUTH_TOKEN=your-secret-token
-
-// Request header
-Authorization: Bearer your-secret-token
 ```
 
-**Tasks**:
 - [ ] Add auth middleware option to OpenCode server
 - [ ] Update shell-ui to include auth header
 - [ ] Update vibeos-send script for auth
@@ -579,14 +152,12 @@ Authorization: Bearer your-secret-token
 
 Improve VNC security options:
 
-**Tasks**:
 - [ ] Add VNC password support via environment variable
 - [ ] Document security best practices
 - [ ] Add TLS/SSL option for VNC
 
 ### 10.3 Container Hardening
 
-**Tasks**:
 - [ ] Research alternatives to seccomp:unconfined
 - [ ] Add read-only root filesystem option
 - [ ] Implement log rotation
@@ -603,7 +174,6 @@ Improve VNC security options:
 
 Save and restore conversation history:
 
-**Tasks**:
 - [ ] Design session storage format
 - [ ] Implement save on session.idle
 - [ ] Implement restore on startup
@@ -613,16 +183,12 @@ Save and restore conversation history:
 
 Support multiple concurrent AI sessions:
 
-**Tasks**:
 - [ ] Add session selector UI
 - [ ] Update state management for multiple sessions
 - [ ] Add session switching keyboard shortcuts
 
 ### 11.3 Message Pagination
 
-Implement message pagination:
-
-**Tasks**:
 - [ ] Complete MESSAGE_LIMIT implementation
 - [ ] Add "Load more" button
 - [ ] Virtual scrolling for large histories
@@ -631,10 +197,17 @@ Implement message pagination:
 
 Show icons when main window hidden:
 
-**Tasks**:
 - [ ] Research PCManFM desktop mode
 - [ ] Create desktop shortcut for shell toggle
 - [ ] Add desktop icons for common apps
+
+### 11.5 VNC Clipboard Integration
+
+Complete the deferred clipboard feature:
+
+- [ ] Investigate x11vnc CLIPBOARD/PRIMARY selection sync
+- [ ] Test alternative clipboard sync methods
+- [ ] Add "Copy from VNC" button to toolbar
 
 ---
 
@@ -657,88 +230,22 @@ Show icons when main window hidden:
 
 ---
 
-## Success Metrics
+## Quick Reference
 
-### Phase 1-2 Completion Criteria (Code Organization & Architecture)
-
-- [x] `main.js` under 200 lines (achieved: ~140 lines)
-- [x] All modules have single responsibility
-- [ ] Event bus handling all SSE events
-- [ ] OpenCode client used throughout
-- [x] No duplicate code in window scripts (shared library created)
-
-### Phase 3 Completion Criteria (Testing)
-
-- [ ] 80%+ test coverage for hooks
-- [ ] All components have basic tests
-- [ ] CI pipeline runs tests on PR
-
-### Phase 4-5 Completion Criteria (noVNC & Shell UI)
-
-- [x] Screenshot button works in beta.html
-- [ ] Clipboard copy from VNC works (deferred - needs x11vnc investigation)
-- [x] Alt+Tab and Super key buttons work
-- [ ] At least 2 shell UI templates available
-- [ ] Template switching works at runtime
-
-### Phase 6-7 Completion Criteria (Agent & OS)
-
-- [x] Agent runs apps in background by default (AGENTS.md guidance)
-- [x] Application registry file exists and is used
-- [x] All media tools installed and functional (ffmpeg, feh, evince)
-- [x] CLI tools available (htop, rg, tree)
-
-### Phase 8 Completion Criteria (Deployment)
-
-- [ ] Raspberry Pi build runs successfully
-- [ ] Common core shared between Docker and Pi builds
-
-### Phase 10 Completion Criteria (Security)
-
-- [ ] Auth works end-to-end
-- [ ] Security documentation complete
-- [ ] Production deployment guide
-
----
-
-## Getting Started
-
-**Phases 1-4, 6-7 are complete.** To continue development:
-
-1. Review this roadmap and AGENTS.md
-2. Pick a phase/task that matches your goals
-3. Create feature branches for changes
-4. Update documentation as you go
-
-```bash
-# Development workflow
-make dev            # Start container
-make logs           # Monitor logs
-make restart-shell  # After UI changes
-make test           # Run tests
-```
-
-### Quick Reference
-
-| Phase | Focus | Priority |
-|-------|-------|----------|
-| 1-2 | Code organization (DONE) | High |
-| 3 | Testing (DONE - 43 unit tests) | Medium |
-| 4 | noVNC improvements (DONE) | Medium |
-| 5 | Shell UI templates | Medium |
-| 6 | Agent improvements (DONE) | Medium |
-| 7 | OS enhancements (DONE) | Low-Medium |
-| 8 | Deployment (Pi, ISO) | Low |
-| 9 | Onboarding | Low |
-| 10 | Security | Medium |
-| 11 | Additional features | Low-Medium |
+| Phase | Focus | Priority | Status |
+|-------|-------|----------|--------|
+| 5 | Shell UI templates | Medium | Not started |
+| 8 | Deployment (Pi, ISO) | Low | Not started |
+| 9 | Onboarding | Low | Not started |
+| 10 | Security | Medium | Not started |
+| 11 | Additional features | Low-Medium | Not started |
 
 ---
 
 ## Related Documentation
 
+- [CHANGELOG.md](CHANGELOG.md) - Completed work history
 - [AGENTS.md](../AGENTS.md) - AI agent instructions
-- [ARCHITECTURE.md](../ARCHITECTURE.md) - System architecture
 - [COMPONENTS.md](COMPONENTS.md) - Component documentation
 - [DEVELOPMENT.md](DEVELOPMENT.md) - Development guide
 - [PROJECT_STATUS.md](PROJECT_STATUS.md) - Current feature status
