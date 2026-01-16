@@ -156,16 +156,16 @@ docker run -d \
 echo "ANTHROPIC_API_KEY=your-key" > .env
 
 # Start
-docker-compose up -d
+docker compose up -d
 
 # Start with rebuild
-docker-compose up -d --build
+docker compose up -d --build
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Stop
-docker-compose down
+docker compose down
 ```
 
 ---
@@ -178,7 +178,7 @@ The Makefile provides convenient shortcuts:
 make help           # Show all available commands
 make build          # Build the Docker image
 make run            # Run the container
-make dev            # Run with docker-compose
+make dev            # Run with docker compose
 make logs           # View container logs
 make shell          # Root shell in container
 make shell-user     # Shell as vibe user

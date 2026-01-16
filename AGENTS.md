@@ -29,14 +29,14 @@ open http://localhost:6080/beta.html
 **Docker Compose:**
 ```bash
 echo "ANTHROPIC_API_KEY=your-key" > .env
-docker-compose up -d
+docker compose up -d
 ```
 
 **Makefile:**
 ```bash
 make build    # Build Docker image
 make run      # Run container
-make dev      # docker-compose up
+make dev      # docker compose up
 make logs     # View logs
 make shell    # Root shell into container
 make status   # Check supervisorctl status
@@ -201,7 +201,7 @@ The shell UI supports special prefixes:
 ```bash
 make stop && make build && make run
 # or
-docker-compose down && docker-compose up --build -d
+docker compose down && docker compose up --build -d
 ```
 
 ## Testing
@@ -216,7 +216,7 @@ make test-automation   # Run in-container automation tests
 ### Manual Testing Checklist
 
 Before committing changes, verify:
-1. Container starts: `docker-compose up -d`
+1. Container starts: `docker compose up -d`
 2. VNC accessible: http://localhost:6080/beta.html
 3. Local prompt works: Type in conversation UI
 4. Remote API works: `./scripts/vibeos-send "Say hello"`
