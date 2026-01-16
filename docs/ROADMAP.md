@@ -19,23 +19,23 @@ This roadmap outlines **future development phases** for VibeOS. For completed wo
 **Timeline**: 2-3 weeks  
 **Priority**: Medium
 
-### 5.1 Multi-Template Architecture
+### 5.1 Multi-Template Architecture (DONE)
 
 Allow cycling through different UI templates:
 
-- [ ] Design template switching mechanism
-- [ ] Create template configuration file
-- [ ] Add runtime template selection
-- [ ] Preserve API integration across templates
+- [x] Design template switching mechanism
+- [x] Create template configuration file (`templates/types.ts`, `templates/index.ts`)
+- [x] Add runtime template selection (localStorage persistence)
+- [x] Preserve API integration across templates (TemplateProps interface)
 
-### 5.2 Template Selection UI
+### 5.2 Template Selection UI (DONE)
 
 Let users choose their preferred interface:
 
-- [ ] Add template selector to settings/menu
-- [ ] Show template previews
-- [ ] Remember user's template preference
-- [ ] Hot-reload on template switch
+- [x] Add template selector modal (`Ctrl+Shift+T`)
+- [x] Show template list with descriptions
+- [x] Remember user's template preference (localStorage)
+- [x] Reload on template switch
 
 ### 5.3 External Template Integration
 
@@ -46,14 +46,14 @@ Integrate existing chat UI templates:
 - [ ] Port one template as proof-of-concept
 - [ ] Document template integration process
 
-### 5.4 Template API Adapter
+### 5.4 Template API Adapter (DONE)
 
 Enable swapping UI while preserving functionality:
 
-- [ ] Define template interface contract
-- [ ] Create adapter layer for OpenCode API
-- [ ] Document required hooks/methods for templates
-- [ ] Create template starter kit
+- [x] Define template interface contract (`TemplateProps`)
+- [x] Create adapter layer for OpenCode API (`App.tsx` passes useSession to templates)
+- [x] Document required hooks/methods for templates
+- [ ] Create template starter kit (documentation)
 
 ---
 
@@ -234,7 +234,7 @@ Complete the deferred clipboard feature:
 
 | Phase | Focus | Priority | Status |
 |-------|-------|----------|--------|
-| 5 | Shell UI templates | Medium | Not started |
+| 5 | Shell UI templates | Medium | 5.1-5.2, 5.4 done |
 | 8 | Deployment (Pi, ISO) | Low | Not started |
 | 9 | Onboarding | Low | Not started |
 | 10 | Security | Medium | Not started |

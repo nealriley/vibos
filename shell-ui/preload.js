@@ -148,5 +148,28 @@ contextBridge.exposeInMainWorld('vibeos', {
    * Close a window gracefully by its wmctrl ID
    * @param {string} windowId - Hex window ID (e.g., "0x04000007")
    */
-  closeWindow: (windowId) => ipcRenderer.send('close-window', windowId)
+  closeWindow: (windowId) => ipcRenderer.send('close-window', windowId),
+  
+  // ============================================================================
+  // Template API - Template switching
+  // ============================================================================
+  
+  /**
+   * Get the list of available templates
+   * @returns {Promise<Array<{id: string, name: string, description: string}>>}
+   */
+  getTemplates: () => ipcRenderer.invoke('get-templates'),
+  
+  /**
+   * Get the currently selected template ID
+   * @returns {Promise<string>}
+   */
+  getSelectedTemplate: () => ipcRenderer.invoke('get-selected-template'),
+  
+  /**
+   * Set the selected template and reload
+   * @param {string} templateId - Template ID to select
+   * @returns {Promise<{success: boolean, error?: string}>}
+   */
+  setTemplate: (templateId) => ipcRenderer.invoke('set-template', templateId)
 });

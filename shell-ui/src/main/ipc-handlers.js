@@ -212,6 +212,35 @@ function registerIpcHandlers() {
   ipcMain.on('close-window', (event, windowId) => {
     closeWindowById(windowId);
   });
+
+  // Template Management
+  // Note: Template list and selection is managed in renderer via localStorage
+  // Main process just provides reload capability
+  
+  ipcMain.handle('get-templates', async () => {
+    // This is handled client-side, but we can provide server-side templates too
+    // For now, return empty - the renderer has the full list
+    return [];
+  });
+
+  ipcMain.handle('get-selected-template', async () => {
+    // Client-side localStorage handles this
+    return 'default';
+  });
+
+  ipcMain.handle('set-template', async (event, templateId) => {
+    try {
+      // Reload the main window to apply new template
+      const mainWindow = getMainWindow();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.reload();
+      }
+      return { success: true };
+    } catch (e) {
+      safeError('Failed to set template:', e);
+      return { success: false, error: e.message };
+    }
+  });
 }
 
 module.exports = {
