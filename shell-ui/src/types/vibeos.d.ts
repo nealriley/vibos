@@ -63,6 +63,17 @@ export interface RunningWindow {
   title: string
 }
 
+export interface TemplateInfo {
+  id: string
+  name: string
+  description: string
+}
+
+export interface SetTemplateResult {
+  success: boolean
+  error?: string
+}
+
 export interface VibeOSAPI {
   // Main Window API
   initSession: () => Promise<InitSessionResult>
@@ -85,6 +96,11 @@ export interface VibeOSAPI {
   onWindowsUpdate: (callback: (windows: RunningWindow[]) => void) => void
   focusWindow: (windowId: string) => void
   closeWindow: (windowId: string) => void
+  
+  // Template API
+  getTemplates: () => Promise<TemplateInfo[]>
+  getSelectedTemplate: () => Promise<string>
+  setTemplate: (templateId: string) => Promise<SetTemplateResult>
 }
 
 declare global {
