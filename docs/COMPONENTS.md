@@ -4,37 +4,105 @@ Detailed documentation for each component in the VibeOS system.
 
 ## Table of Contents
 
-1. [Shell UI (Electron App)](#shell-ui-electron-app)
+1. [Shell UI (Electron + React App)](#shell-ui-electron--react-app)
 2. [OpenCode Server](#opencode-server)
 3. [Supervisor Configuration](#supervisor-configuration)
 4. [Openbox Window Manager](#openbox-window-manager)
-5. [Screenshot Tool](#screenshot-tool)
+5. [Automation Tools](#automation-tools)
 6. [Helper Scripts](#helper-scripts)
 
 ---
 
-## Shell UI (Electron App)
+## Shell UI (Electron + React App)
 
-The shell UI is an Electron application that provides a conversation interface connected to the OpenCode server.
+The shell UI is an Electron application with a React + TypeScript frontend that provides a conversation interface connected to the OpenCode server.
 
 ### Location
 
 ```
 /home/vibe/shell-ui/
-├── main.js         # Main process - OpenCode client, SSE, IPC
-├── index.html      # Renderer - Conversation UI
-├── preload.js      # IPC bridge
-└── package.json    # Dependencies
+├── main.js              # Electron main process
+├── preload.js           # IPC bridge (contextBridge)
+├── icon.html            # Taskbar dock UI (vanilla JS)
+├── index.html           # Vite entry point
+├── dist/                # Built React app
+│   ├── index.html
+│   └── assets/
+├── src/                 # React source code
+│   ├── main.tsx         # React entry point
+│   ├── App.tsx          # Root component
+│   ├── components/      # UI components
+│   ├── hooks/           # Custom React hooks
+│   ├── lib/             # Utilities
+│   ├── types/           # TypeScript definitions
+│   └── styles/          # CSS
+├── package.json         # Dependencies
+├── vite.config.ts       # Vite build config
+└── tsconfig.json        # TypeScript config
 ```
+
+### Technology Stack
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Electron | 33.x | Desktop framework |
+| React | 18.3.x | UI framework |
+| TypeScript | 5.6.x | Type safety |
+| Vite | 6.x | Build tool |
+| Tailwind CSS | 4.x | Styling |
+| Motion | 12.x | Animations (Framer Motion) |
+| Radix UI | Various | Accessible primitives |
+
+### Two-Window Architecture
+
+The shell UI uses two windows to coexist with external applications:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    main.js (Main Process)                │
+│  - OpenCode HTTP client                                  │
+│  - SSE event subscription                                │
+│  - IPC handlers                                          │
+│  - Window management                                     │
+│  - Window/command polling                                │
+└─────────────────────────────────────────────────────────┘
+           │                              │
+           │ IPC                          │ IPC
+           ▼                              ▼
+┌──────────────────────┐    ┌──────────────────────────────┐
+│   icon.html          │    │      React App (dist/)       │
+│   (Icon Window)      │    │      (Main Window)           │
+│                      │    │                              │
+│   64x64 pixels       │    │   Fullscreen                 │
+│   Bottom-left        │    │   Conversation UI            │
+│   Always on top      │    │   - Message feed             │
+│   Non-focusable      │    │   - Streaming responses      │
+│   Shows running apps │    │   - Tool call display        │
+└──────────────────────┘    └──────────────────────────────┘
+```
+
+**Icon Window Properties**:
+- `width: 64, height: 64` - Small dock button
+- `alwaysOnTop: true` - Stays above all windows
+- `focusable: false` - Never steals focus
+- `skipTaskbar: true` - Doesn't appear in taskbar
+- Dynamically resizes to show running application icons
+
+**Main Window Properties**:
+- `fullscreen: true, frame: false` - Borderless fullscreen
+- `backgroundColor: '#09090b'` - Dark background
+- Toggle visibility with `Super+Space` or clicking icon
 
 ### main.js - Main Process
 
-The main process handles:
+The main process (~900 lines) handles:
 
-1. **OpenCode HTTP Client**: Sends messages, fetches history
-2. **SSE Subscription**: Real-time event streaming via `eventsource` package
-3. **Session Management**: Creates/reuses "desktop" session
+1. **Window Management**: Creates and manages icon/main windows
+2. **OpenCode HTTP Client**: Session management, message sending
+3. **SSE Subscription**: Real-time event streaming via `eventsource` package
 4. **IPC Handlers**: Bridge between renderer and OpenCode API
+5. **Window Polling**: Monitors X11 windows for taskbar updates
+6. **Command Polling**: Watches `/tmp/vibeos-command` for external signals
 
 #### Key Functions
 
@@ -69,143 +137,146 @@ async function getOrCreateSession(title = 'desktop') {
 const EventSource = require('eventsource');
 
 function subscribeToEvents() {
-  const url = `${config.opencodeUrl}/event`;
-  eventSource = new EventSource(url);
-  
+  eventSource = new EventSource(`${config.opencodeUrl}/event`);
   eventSource.onmessage = (event) => {
     const data = JSON.parse(event.data);
     handleServerEvent(data);
   };
+  eventSource.onerror = () => setTimeout(subscribeToEvents, 3000);
 }
+```
+
+**External Message Detection**:
+```javascript
+// Detects messages from API (not local UI) by tracking expected responses
+let expectingLocalResponse = false;
 
 function handleServerEvent(event) {
-  // Forward to renderer
+  if (event.type === 'message.created' && event.properties?.info?.role === 'user') {
+    event.isExternal = !expectingLocalResponse;
+  }
   mainWindow.webContents.send('opencode-event', event);
-}
-```
-
-**IPC Handlers**:
-```javascript
-ipcMain.handle('init-session', async () => {
-  await waitForServer();
-  const session = await getOrCreateSession('desktop');
-  currentSessionId = session.id;
-  subscribeToEvents();
-  const messages = await getSessionMessages(currentSessionId);
-  return { success: true, session, messages };
-});
-
-ipcMain.handle('submit-input', async (event, input) => {
-  // Handle !app, $shell, or opencode prompts
-  const parsed = parseInput(input);
-  // ...
-});
-
-ipcMain.handle('get-messages', async () => {
-  const messages = await getSessionMessages(currentSessionId);
-  return { success: true, messages };
-});
-```
-
-### index.html - Renderer
-
-Single-page UI with embedded CSS and JavaScript.
-
-#### State Management
-
-```javascript
-// Single source of truth
-const MESSAGE_LIMIT = 10;
-let allMessages = [];           // Server state cache
-let displayedCount = MESSAGE_LIMIT;
-let currentStreamingMessage = null;
-let isWaitingForResponse = false;
-```
-
-#### Core Functions
-
-**renderConversation()** - Renders conversation from server state:
-```javascript
-function renderConversation() {
-  conversation.innerHTML = '';
-  
-  const startIndex = Math.max(0, allMessages.length - displayedCount);
-  const messagesToShow = allMessages.slice(startIndex);
-  
-  // Add "Load more" button if needed
-  if (startIndex > 0) {
-    // ... add button
-  }
-  
-  for (const msg of messagesToShow) {
-    if (msg.info.role === 'user') {
-      renderUserMessage(msg);
-    } else if (msg.info.role === 'assistant') {
-      renderAssistantMessage(msg);
-    }
-  }
-}
-```
-
-**handleOpencodeEvent()** - Processes SSE events:
-```javascript
-function handleOpencodeEvent(event) {
-  switch (event.type) {
-    case 'session.status':
-      // Handle busy/idle state
-      break;
-      
-    case 'session.idle':
-      // Refresh from server
-      refreshFromServer();
-      break;
-      
-    case 'message.part.updated':
-      // Stream text updates
-      updateStreamingMessage(event.properties.part);
-      break;
-  }
-}
-```
-
-**refreshFromServer()** - Fetches and re-renders:
-```javascript
-async function refreshFromServer() {
-  const result = await window.vibeos.getMessages();
-  allMessages = result.messages;
-  renderConversation();
-}
-```
-
-#### Theme Colors
-
-```css
-:root {
-  --bg-color: #0a0a0a;
-  --surface-color: #1a1a1a;
-  --border-color: #333;
-  --text-color: #e0e0e0;
-  --accent-color: #7c3aed;
-  --success-color: #22c55e;
-  --error-color: #ef4444;
 }
 ```
 
 ### preload.js - IPC Bridge
 
-Secure bridge between renderer and main process:
+Secure bridge between renderer and main process using `contextBridge`:
 
 ```javascript
 contextBridge.exposeInMainWorld('vibeos', {
+  // Session management
   initSession: () => ipcRenderer.invoke('init-session'),
   submitInput: (input) => ipcRenderer.invoke('submit-input', input),
   getMessages: () => ipcRenderer.invoke('get-messages'),
   abort: () => ipcRenderer.invoke('abort'),
+  resetSession: () => ipcRenderer.invoke('reset-session'),
+  getConfig: () => ipcRenderer.invoke('get-config'),
   
+  // Event subscriptions
   onOpencodeEvent: (callback) => {
     ipcRenderer.on('opencode-event', (event, data) => callback(data));
-  }
+  },
+  removeOpencodeEventListener: () => {
+    ipcRenderer.removeAllListeners('opencode-event');
+  },
+  onSessionReset: (callback) => {
+    ipcRenderer.on('session-reset', callback);
+  },
+  
+  // Window control (for icon.html)
+  toggleMainWindow: () => ipcRenderer.send('toggle-main-window'),
+  onWindowsUpdate: (callback) => {
+    ipcRenderer.on('windows-update', (event, windows) => callback(windows));
+  },
+  focusWindow: (windowId) => ipcRenderer.send('focus-window', windowId),
+  closeWindow: (windowId) => ipcRenderer.send('close-window', windowId)
 });
+```
+
+### React Application (src/)
+
+#### Component Hierarchy
+
+```
+App.tsx (Root)
+├── Loading Overlay (AnimatePresence)
+├── Welcome Screen (empty state)
+├── Message Feed
+│   └── Message.tsx (Polymorphic dispatcher)
+│       ├── AIMessage.tsx
+│       │   └── ToolCallDisplay (collapsible)
+│       └── UserMessage.tsx
+│           ├── RegularUserMessage
+│           ├── ShellMessage ($)
+│           ├── AppMessage (!)
+│           └── ExternalMessage (API)
+├── Thinking Indicator
+├── Input Area
+│   ├── Auto-resizing Textarea
+│   └── Send/Stop Button
+└── Toaster (sonner)
+```
+
+#### Custom Hooks
+
+**useSession** (`src/hooks/useSession.ts`):
+Central state management for the conversation:
+```typescript
+interface UseSessionReturn {
+  status: 'loading' | 'ready' | 'busy' | 'error'
+  messages: Message[]
+  error: string | null
+  isStreaming: boolean
+  streamingMessageId: string | null
+  sendMessage: (input: string) => Promise<Result>
+  abort: () => Promise<void>
+  reset: () => Promise<void>
+  updateStreamingPart: (part: MessagePart) => void
+  isExternalMessage: (messageId: string) => boolean
+}
+```
+
+**useSSE** (`src/hooks/useSSE.ts`):
+Handles SSE event subscriptions with callbacks for different event types.
+
+**useAutoFade** (`src/hooks/useAutoFade.ts`):
+Time-based opacity fading for old messages (currently unused).
+
+#### Message Types
+
+The UI renders different styles based on message origin:
+
+| Type | Prefix | Style |
+|------|--------|-------|
+| Regular | (none) | Right-aligned, violet accent |
+| Shell | `$` | Left-aligned, terminal icon, emerald accent |
+| App | `!` | Badge showing launched app, sky accent |
+| External | API | Yellow accent, "API" badge, pulsing border |
+| AI | - | Left-aligned, emerald accent, tool calls |
+
+#### Utilities
+
+**lib/api.ts**: Typed wrapper around `window.vibeos` IPC calls
+**lib/cn.ts**: Class name utility (clsx + tailwind-merge)
+**lib/markdown.ts**: Simple markdown-to-HTML parser
+**lib/parseCommand.ts**: Input prefix parser (`!`, `$`)
+
+### Build Process
+
+```bash
+# Install dependencies
+cd shell-ui && npm install
+
+# Build React app
+npm run build:renderer  # Outputs to dist/
+
+# Run in development
+npm run dev:vite  # Vite dev server (standalone)
+npm run dev       # Build + launch Electron
+
+# Type checking
+npm run typecheck
 ```
 
 ---
@@ -220,6 +291,7 @@ Headless AI backend providing HTTP API and SSE events.
 
 ```json
 {
+  "$schema": "https://opencode.ai/config.json",
   "permission": "allow"
 }
 ```
@@ -245,7 +317,7 @@ This enables auto-approval of all tool calls without user confirmation.
 | `server.connected` | - | Initial connection |
 | `session.status` | `{status: {type: "busy"/"idle"}}` | Session state |
 | `session.idle` | `{sessionID}` | Conversation complete |
-| `message.updated` | `{info: {id, role, ...}}` | Message metadata |
+| `message.created` | `{info: {id, role, ...}}` | New message |
 | `message.part.updated` | `{part: {type, text, ...}}` | Content streaming |
 
 ### Message Structure
@@ -279,62 +351,23 @@ Process manager running as PID 1.
 
 ### Services
 
-#### OpenCode Server (Priority 50)
+| Service | Priority | Port | User | Description |
+|---------|----------|------|------|-------------|
+| opencode | 50 | 4096 | vibe | AI backend (starts first) |
+| xvfb | 100 | :0 | root | Virtual display |
+| openbox | 150 | - | vibe | Window manager + shell-ui |
+| x11vnc | 200 | 5900 | root | VNC server |
+| novnc | 300 | 6080 | vibe | WebSocket proxy |
 
-```ini
-[program:opencode]
-command=opencode serve --port 4096 --hostname 0.0.0.0
-user=vibe
-directory=/home/vibe
-autostart=true
-autorestart=true
-priority=50
-environment=HOME="/home/vibe",USER="vibe"
+### Service Dependencies
+
 ```
-
-#### Xvfb (Priority 100)
-
-```ini
-[program:xvfb]
-command=/usr/bin/Xvfb :0 -screen 0 %(ENV_RESOLUTION)sx24
-user=root
-autostart=true
-autorestart=true
-priority=100
-```
-
-#### Openbox (Priority 150)
-
-```ini
-[program:openbox]
-command=/usr/bin/openbox-session
-user=vibe
-autostart=true
-autorestart=true
-priority=150
-environment=HOME="/home/vibe",USER="vibe",DISPLAY=":0"
-```
-
-#### x11vnc (Priority 200)
-
-```ini
-[program:x11vnc]
-command=/usr/bin/x11vnc -display :0 -nopw -forever -shared -rfbport 5900 -noshm
-user=root
-autostart=true
-autorestart=true
-priority=200
-```
-
-#### noVNC (Priority 300)
-
-```ini
-[program:novnc]
-command=websockify --web=/opt/novnc/ 6080 localhost:5900
-user=vibe
-autostart=true
-autorestart=true
-priority=300
+Priority Order (lower = starts first):
+50:  opencode  → Independent, starts early
+100: xvfb      → Must be ready before WM
+150: openbox   → Needs display, launches shell-ui via autostart
+200: x11vnc    → Needs display and WM
+300: novnc     → Needs VNC server
 ```
 
 ---
@@ -375,55 +408,61 @@ ELECTRON_DISABLE_SANDBOX=1 npm start &
 
 | Key | Action |
 |-----|--------|
+| Super+Space | Toggle shell visibility |
 | Super+Return | Open terminal |
-| Super+B | Open browser |
-| Super+Space | Toggle shell (if registered) |
+| Super+B | Open Firefox |
+| Super+Shift+R | Reset session (writes to /tmp/vibeos-command) |
 | Alt+F4 | Close window |
 | Alt+Tab | Cycle windows |
+| Super+F | Toggle fullscreen |
+| Super+M | Toggle maximize |
+| Escape | Show main window (global) |
+
+### Window Rules
+
+| Application | Decorations | Behavior |
+|-------------|-------------|----------|
+| vibeos-shell | No | Fullscreen |
+| Electron | No | Fullscreen |
+| xfce4-terminal | Yes | Normal |
+| Firefox/Chrome | Yes | Maximized |
 
 ---
 
-## Screenshot Tool
+## Automation Tools
 
-Desktop capture utility.
+Located in `/home/vibe/scripts/`.
 
-### Location
+### Master Tool
 
-```
-/home/vibe/scripts/screenshot.sh
-```
-
-### Usage
+**window.sh** - Unified interface for all window operations:
 
 ```bash
-# Auto-named with timestamp
-/home/vibe/scripts/screenshot.sh
-
-# Custom filename
-/home/vibe/scripts/screenshot.sh myshot.png
+/home/vibe/scripts/window.sh <command> [args...]
 ```
 
-### Implementation
+Commands: `list`, `focus`, `move`, `resize`, `close`, `maximize`, `minimize`, `screenshot`, `type`, `key`
 
-```bash
-#!/bin/bash
-set -euo pipefail
+### Individual Tools
 
-SHARED_DIR="/home/vibe/shared"
-FILENAME="${1:-screenshot-$(date +%Y%m%d-%H%M%S).png}"
-
-# Ensure .png extension
-if [[ "$FILENAME" != *.png ]]; then
-    FILENAME="${FILENAME}.png"
-fi
-
-OUTPUT="$SHARED_DIR/$FILENAME"
-mkdir -p "$SHARED_DIR"
-export DISPLAY=:0
-
-scrot "$OUTPUT"
-echo "$OUTPUT"
-```
+| Script | Purpose | Example |
+|--------|---------|---------|
+| `windows-list.sh` | List windows (JSON) | `./windows-list.sh` |
+| `window-focus.sh` | Focus by ID/class/title | `./window-focus.sh Firefox` |
+| `window-move.sh` | Move to position | `./window-move.sh 0x123 100 100` |
+| `window-resize.sh` | Resize window | `./window-resize.sh 0x123 800 600` |
+| `window-close.sh` | Close gracefully | `./window-close.sh 0x123` |
+| `window-maximize.sh` | Maximize/restore | `./window-maximize.sh 0x123` |
+| `window-minimize.sh` | Minimize | `./window-minimize.sh 0x123` |
+| `window-screenshot.sh` | Capture window | `./window-screenshot.sh 0x123 out.png` |
+| `window-type.sh` | Type text | `./window-type.sh "Hello"` |
+| `window-key.sh` | Send keystroke | `./window-key.sh Return` |
+| `mouse-move.sh` | Move cursor | `./mouse-move.sh 500 300` |
+| `mouse-click.sh` | Click | `./mouse-click.sh 500 300` |
+| `mouse-location.sh` | Get position | `./mouse-location.sh` |
+| `screen-info.sh` | Get dimensions | `./screen-info.sh` |
+| `screenshot.sh` | Full desktop | `./screenshot.sh output.png` |
+| `apps-list.sh` | List GUI apps | `./apps-list.sh` |
 
 ---
 
@@ -438,24 +477,13 @@ Send messages to the desktop session:
 ```bash
 ./scripts/vibeos-send "What is 2+2?"
 ./scripts/vibeos-send "Open Chrome and go to github.com"
+echo "Hello" | ./scripts/vibeos-send
 ```
 
-**Implementation**:
-```bash
-#!/bin/bash
-HOST="${VIBEOS_HOST:-localhost}"
-PORT="${VIBEOS_PORT:-4096}"
-SESSION_NAME="${VIBEOS_SESSION:-desktop}"
-
-# Find session by name
-SESSION_ID=$(curl -s "http://${HOST}:${PORT}/session" | \
-  jq -r ".[] | select(.title == \"${SESSION_NAME}\") | .id")
-
-# Send message
-curl -X POST "http://${HOST}:${PORT}/session/${SESSION_ID}/message" \
-  -H "Content-Type: application/json" \
-  -d "{\"parts\": [{\"type\": \"text\", \"text\": \"$MESSAGE\"}]}"
-```
+**Environment Variables**:
+- `VIBEOS_HOST` - API host (default: localhost)
+- `VIBEOS_PORT` - API port (default: 4096)
+- `VIBEOS_SESSION` - Session name (default: desktop)
 
 ### vibeos-screenshot
 
@@ -466,17 +494,5 @@ Capture desktop from host:
 ./scripts/vibeos-screenshot custom-name.png   # Custom name
 ```
 
-**Implementation**:
-```bash
-#!/bin/bash
-CONTAINER="${VIBEOS_CONTAINER:-vibeos-dev}"
-FILENAME="${1:-}"
-
-if [ -n "$FILENAME" ]; then
-    OUTPUT=$(docker exec "$CONTAINER" /home/vibe/scripts/screenshot.sh "$FILENAME")
-else
-    OUTPUT=$(docker exec "$CONTAINER" /home/vibe/scripts/screenshot.sh)
-fi
-
-echo "Screenshot saved: ./shared/$(basename $OUTPUT)"
-```
+**Environment Variables**:
+- `VIBEOS_CONTAINER` - Container name (default: vibeos-dev)

@@ -1,10 +1,35 @@
 # VibeOS Project Status
 
-Last Updated: January 13, 2026
+Last Updated: January 16, 2026
 
 ## Overview
 
-VibeOS is a containerized AI-powered desktop environment accessible via VNC/noVNC. It runs an Electron-based shell UI that interfaces with OpenCode (AI coding assistant) and provides a graphical Linux desktop.
+VibeOS is a containerized AI-powered desktop environment accessible via VNC/noVNC. It runs an Electron-based shell UI (React + TypeScript) that interfaces with OpenCode (AI coding assistant) and provides a graphical Linux desktop.
+
+## Current Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                     Docker Container                     │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │              Supervisor (PID 1)                   │  │
+│  └──────────────────────────────────────────────────┘  │
+│         │         │         │         │                 │
+│  ┌──────▼──┐ ┌────▼───┐ ┌───▼────┐ ┌──▼───┐           │
+│  │OpenCode │ │  Xvfb  │ │ x11vnc │ │noVNC │           │
+│  │ :4096   │ │  :0    │ │ :5900  │ │:6080 │           │
+│  └────┬────┘ └────────┘ └────────┘ └──────┘           │
+│       │                                                 │
+│       │ HTTP/SSE    ┌─────────────────────────────┐   │
+│       └─────────────► Openbox + Electron Shell UI │   │
+│                     │  (React + TypeScript)       │   │
+│                     │  - Two-window architecture  │   │
+│                     │  - Motion animations        │   │
+│                     │  - Real-time streaming      │   │
+│                     └─────────────────────────────┘   │
+└─────────────────────────────────────────────────────────┘
+```
 
 ## Completed Features
 
@@ -19,22 +44,29 @@ VibeOS is a containerized AI-powered desktop environment accessible via VNC/noVN
 - [x] Supervisor process management
 - [x] Quick start script (start.sh)
 - [x] docker-compose.yml for easy deployment
+- [x] Comprehensive Makefile with 25+ targets
 
-### Shell UI (Electron)
+### Shell UI (Electron + React)
 
+**Completed January 2026 - React Migration**
+
+- [x] React 18 + TypeScript + Vite build system
 - [x] Two-window architecture (icon + main)
 - [x] Main conversation window (fullscreen, frameless)
 - [x] Dock-style icon window (always on top, non-focusable)
 - [x] Dynamic taskbar showing running windows
 - [x] Stop button to abort AI generation
 - [x] SSE event streaming for real-time responses
-- [x] Message history with pagination
-- [x] Dark theme matching VibeOS aesthetic
-- [x] Keyboard shortcuts (Super+Space, Escape)
+- [x] Message history with server-authoritative state
+- [x] Dark theme (Zinc-based Tailwind palette)
+- [x] Keyboard shortcuts (Super+Space, Escape, Ctrl+Shift+R)
 - [x] App launcher (`!chrome`, `!terminal`, etc.)
 - [x] Shell command execution (`$ls -la`)
 - [x] Markdown rendering in responses
-- [x] Tool call visualization (expandable)
+- [x] Tool call visualization (collapsible)
+- [x] Motion animations for message transitions
+- [x] External API message detection and styling
+- [x] Optimistic rendering for user messages
 
 ### Window Automation Tools
 
@@ -43,8 +75,8 @@ Located in `/home/vibe/scripts/`:
 | Script | Description | Status |
 |--------|-------------|--------|
 | `window.sh` | Unified interface for all operations | Done |
-| `windows-list.sh` | List all open windows | Done |
-| `window-focus.sh` | Focus a window by ID/class/title | Done |
+| `windows-list.sh` | List all open windows (JSON) | Done |
+| `window-focus.sh` | Focus window by ID/class/title | Done |
 | `window-move.sh` | Move window to position | Done |
 | `window-resize.sh` | Resize window | Done |
 | `window-close.sh` | Close window gracefully | Done |
@@ -69,86 +101,109 @@ Located in `/home/vibe/scripts/`:
   - Auto-reconnect (3s interval, max 50 attempts)
   - Fullscreen mode (F11)
   - Ctrl+Alt+Del button
-  - Reconnect overlay with retry button
+  - Reset session button
 
-### Applications
+### Test Infrastructure
 
-- [x] Google Chrome browser
-- [x] Firefox browser
-- [x] xfce4-terminal
-- [x] mousepad text editor
-- [x] pcmanfm file manager
-- [x] scrot screenshot tool
-
-### Host Helper Scripts
-
-- [x] `vibeos-send` - Send messages to AI from host
-- [x] `vibeos-screenshot` - Capture desktop from host
+- [x] Test framework with helper functions
+- [x] Remote API tests (`tests/remote/`)
+- [x] In-container automation tests (`tests/automation/`)
+- [x] Makefile integration (`make test`)
 
 ### Documentation
 
 - [x] README.md - Project overview and quick start
+- [x] AGENTS.md - AI agent instructions
 - [x] ARCHITECTURE.md - Technical system architecture
-- [x] docs/README.md - Documentation index
-- [x] docs/tutorial-getting-started.md - Getting started tutorial
+- [x] docs/README.md - Documentation index (Diataxis)
+- [x] docs/tutorial-getting-started.md
 - [x] docs/reference-api.md - OpenCode API reference
-- [x] docs/guide-vnc-interfaces.md - VNC interface guide
-- [x] docs/guide-integration.md - Integration guide
-- [x] docs/reference-automation-tools.md - Automation tools reference
-- [x] docs/explanation-architecture.md - Architecture explanation
-- [x] docs/DEVELOPMENT.md - Development guide
-- [x] docs/COMPONENTS.md - Component documentation
+- [x] docs/guide-vnc-interfaces.md
+- [x] docs/guide-integration.md
+- [x] docs/reference-automation-tools.md
+- [x] docs/explanation-architecture.md
+- [x] docs/DEVELOPMENT.md
+- [x] docs/COMPONENTS.md (Updated for React)
+- [x] Library reference docs (lib-*.md)
 
 ---
 
-## File Structure
+## Current Technology Stack
 
-```
-vibeos/
-├── Dockerfile                 # Container definition
-├── docker-compose.yml         # Easy deployment
-├── Makefile                   # Build automation
-├── start.sh                   # Quick start script
-├── README.md                  # Project overview
-├── ARCHITECTURE.md            # Technical architecture
-├── config/
-│   ├── openbox/              # Window manager config
-│   │   ├── rc.xml            # Keybindings
-│   │   └── autostart         # Startup script
-│   ├── opencode/             # AI agent configuration
-│   │   └── opencode.json     # Auto-approve settings
-│   ├── supervisord.conf      # Service definitions
-│   └── xfce4-terminal/       # Terminal config
-├── scripts/
-│   ├── entrypoint.sh         # Container entrypoint
-│   ├── vibeos-send           # Host: send messages
-│   ├── vibeos-screenshot     # Host: capture desktop
-│   └── tools/                # Container: automation
-│       ├── window.sh
-│       ├── windows-list.sh
-│       └── ... (other tools)
-├── shell-ui/
-│   ├── main.js               # Electron main process
-│   ├── preload.js            # IPC bridge
-│   ├── index.html            # Main conversation UI
-│   ├── icon.html             # Taskbar UI
-│   └── package.json          # Dependencies
-├── novnc/
-│   └── beta.html             # Custom VNC web client
-├── shared/                   # Host-mounted for file exchange
-├── projects/                 # Host-mounted for project files
-└── docs/
-    ├── README.md             # Documentation index
-    ├── tutorial-getting-started.md
-    ├── reference-api.md
-    ├── guide-vnc-interfaces.md
-    ├── guide-integration.md
-    ├── reference-automation-tools.md
-    ├── explanation-architecture.md
-    ├── DEVELOPMENT.md
-    ├── COMPONENTS.md
-    └── PROJECT_STATUS.md     # This file
-```
+### Container Services
+
+| Component | Technology | Port |
+|-----------|------------|------|
+| AI Backend | OpenCode Server | 4096 |
+| Display | Xvfb | :0 |
+| Window Manager | Openbox | - |
+| VNC Server | x11vnc | 5900 |
+| Web Client | noVNC 1.4.0 | 6080 |
+| Process Manager | Supervisor | - |
+
+### Shell UI Stack
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Electron | 33.x | Desktop framework |
+| React | 18.3.x | UI framework |
+| TypeScript | 5.6.x | Type safety |
+| Vite | 6.x | Build tool |
+| Tailwind CSS | 4.x | Styling |
+| Motion | 12.x | Animations |
+| Radix UI | Various | Accessible primitives |
+
+---
+
+## Known Issues / Technical Debt
+
+### High Priority
+
+1. **Duplicate SSE Event Handling**: `useSession` and `useSSE` hooks both subscribe to events
+2. **Large Main Process**: `main.js` is ~900 lines, needs modularization
+3. **No Error Boundary**: React app lacks error boundary for graceful failure
+
+### Medium Priority
+
+1. **Unused Code**: `useAutoFade` hook not integrated, `parseCommand` duplicates main.js logic
+2. **Message Pagination**: `MESSAGE_LIMIT` defined but not used
+3. **Window Script Duplication**: Each script has duplicated window-finding logic
+4. **Hardcoded Paths**: Many paths hardcoded throughout codebase
+
+### Low Priority
+
+1. **TypeScript in Main Process**: `main.js` and `preload.js` still vanilla JS
+2. **Unused Configs**: labwc, foot, alacritty configs exist but unused
+3. **Log Rotation**: Not configured for supervisor logs
+
+---
+
+## Pending / Future Work
+
+### Short-term
+
+- [ ] Add React error boundary
+- [ ] Implement message pagination
+- [ ] Extract shared window-finding library for scripts
+- [ ] Add connection status indicator to UI
+- [ ] Clean up unused hooks/code
+
+### Medium-term
+
+- [ ] Modularize main.js into separate modules
+- [ ] Convert main.js to TypeScript
+- [ ] Add API authentication option
+- [ ] Session persistence across restarts
+- [ ] Multi-session support
+- [ ] Desktop icons when main window hidden
+
+### Long-term (Vision)
+
+- [ ] Bare-metal Linux distribution
+- [ ] Raspberry Pi support (ARM64)
+- [ ] Live USB support
+- [ ] Wayland compositor (labwc/cage)
+- [ ] Custom VibeOS Linux distro
 
 ---
 
@@ -163,54 +218,6 @@ vibeos/
 
 ---
 
-## Pending / Future Work
-
-### Active Investigation: Shell UI Redesign
-
-> **Status**: Investigation Complete, Implementation Pending  
-> **Reference**: [Shell UI Redesign Technical Reference](reference-shell-ui-redesign.md)  
-> **Full Plan**: [TASKS.md](../TASKS.md)
-
-Migration from vanilla JavaScript to React + Motion animation system:
-
-- [ ] **Phase 1**: Migration Setup (React, Vite, Tailwind)
-- [ ] **Phase 2**: Core Components (Message types, Feed, Input)
-- [ ] **Phase 3**: Animation System (variants, auto-fade, layout)
-- [ ] **Phase 4**: Integration (SSE, session management)
-- [ ] **Phase 5**: Polish (scroll, hover-reveal)
-
-Key features:
-- Newest-first message display (notification-style)
-- Auto-fade messages over time
-- Type-specific animations (`$` shell, `!` app, external API)
-- External API message classifier badge
-
-### Short-term
-
-- [ ] Desktop icons when main window hidden (PCManFM desktop mode)
-- [ ] Clipboard tools (xclip integration)
-- [ ] Session persistence across restarts
-- [ ] Cleanup unused config dirs (alacritty, foot, labwc)
-
-### Medium-term
-
-- [ ] Window state tools (fullscreen, sticky, always-on-top)
-- [ ] Desktop/workspace switching
-- [ ] Region screenshot capability
-- [ ] Window wait/watch for automation
-- [ ] Multi-session support
-- [ ] API authentication
-
-### Long-term (Vision)
-
-- [ ] Bare-metal Linux distribution
-- [ ] Raspberry Pi support (ARM64)
-- [ ] Live USB support
-- [ ] Wayland compositor (labwc/cage)
-- [ ] Custom VibeOS Linux distro
-
----
-
 ## Quick Commands
 
 ```bash
@@ -220,11 +227,12 @@ Key features:
 # Force rebuild
 ./start.sh --build
 
-# Stop
-./start.sh --stop
-
-# Access
-open http://localhost:6080/beta.html
+# Using Makefile
+make dev            # docker compose up
+make logs           # View logs
+make shell          # Shell into container
+make status         # Service status
+make test           # Run all tests
 
 # Send message from host
 ./scripts/vibeos-send "Hello, VibeOS!"
@@ -235,21 +243,9 @@ open http://localhost:6080/beta.html
 
 ---
 
-## Development Commands
+## Change Log
 
-```bash
-# View logs
-docker logs vibeos-dev
-
-# Shell into container
-docker exec -it vibeos-dev bash
-
-# Check service status
-docker exec vibeos-dev supervisorctl status
-
-# Restart shell-ui
-docker exec vibeos-dev supervisorctl restart openbox
-
-# Take debug screenshot
-docker exec vibeos-dev /home/vibe/scripts/screenshot.sh debug.png
-```
+- **2026-01-16**: Completed comprehensive architecture audit
+- **2026-01-14**: Shell UI React migration complete
+- **2026-01-13**: Added test infrastructure, stop button, reset session
+- **2026-01-13**: Initial AGENTS.md and documentation structure

@@ -273,6 +273,7 @@ When updating, add a dated entry in this section:
 - *2026-01-13*: **Shell UI Migration to React + Motion** - Complete rewrite of shell-ui from vanilla JS to React 18 + TypeScript + Vite + Tailwind CSS + Motion (Framer Motion). New structure under `shell-ui/src/` with components, hooks, and types. Build command: `npm run build:renderer`. Legacy index.html preserved as `index.html.legacy`.
 - *2026-01-14*: Removed repo-local OpenCode agents/skills (`.opencode/`) and reverted `config/opencode/opencode.json` to auto-approve-only config.
 - *2026-01-14*: Fixed shell UI window/background and layout: enforce fullscreen opaque window, center the chat column, and place input at the bottom with messages above.
+- *2026-01-16*: **Comprehensive Architecture Audit** - Full codebase audit covering infrastructure, shell-ui, and documentation. Updated `docs/COMPONENTS.md` for React architecture, updated `docs/PROJECT_STATUS.md` marking React migration complete, created `docs/ROADMAP.md` with phased development plan. Key findings: main.js needs modularization (900 lines), duplicate SSE handling in hooks, missing error boundary, unused code (useAutoFade, parseCommand).
 
 ---
 

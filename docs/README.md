@@ -54,7 +54,8 @@ Background and conceptual information.
 ## For Contributors
 
 - [**Development Guide**](DEVELOPMENT.md) - Setting up dev environment, debugging, testing
-- [**Project Status**](PROJECT_STATUS.md) - Current features and roadmap
+- [**Project Status**](PROJECT_STATUS.md) - Current features and known issues
+- [**Development Roadmap**](ROADMAP.md) - Phased development plan for next version
 
 ---
 
