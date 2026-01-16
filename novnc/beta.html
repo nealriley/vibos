@@ -295,7 +295,6 @@
         // State Management
         // ====================================================================
         let rfb = null;  // RFB connection instance
-        let vncClipboard = '';  // Clipboard data received from VNC server
         let reconnectTimer = null;
         let reconnectAttempts = 0;
         const RECONNECT_DELAY = 3000;
@@ -414,10 +413,6 @@
                 rfb.addEventListener('disconnect', onDisconnect);
                 rfb.addEventListener('credentialsrequired', onCredentialsRequired);
                 rfb.addEventListener('securityfailure', onSecurityFailure);
-                rfb.addEventListener('clipboard', (e) => {
-                    vncClipboard = e.detail.text || '';
-                    console.log('VNC clipboard updated:', vncClipboard.substring(0, 50) + (vncClipboard.length > 50 ? '...' : ''));
-                });
 
             } catch (err) {
                 console.error('Connection error:', err);
@@ -521,26 +516,6 @@
             }
         }
         
-        // Clipboard - copy VNC clipboard to host
-        function copyClipboard() {
-            if (!rfb) return;
-            
-            // Use clipboard data received via VNC clipboard event
-            if (vncClipboard) {
-                navigator.clipboard.writeText(vncClipboard).then(() => {
-                    const btn = document.getElementById('clipboard_btn');
-                    const originalText = btn.textContent;
-                    btn.textContent = 'Copied!';
-                    setTimeout(() => { btn.textContent = originalText; }, 1000);
-                }).catch(err => {
-                    console.error('Clipboard copy failed:', err);
-                    alert('Clipboard copy failed. Browser may not support clipboard API.');
-                });
-            } else {
-                alert('No clipboard data available from VNC session.\n\nTip: Select and copy text (Ctrl+C) in the VNC session first.');
-            }
-        }
-        
         // Send Alt+Tab
         function sendAltTab() {
             if (rfb) {
@@ -566,7 +541,6 @@
         fullscreenBtn.addEventListener('click', toggleFullscreen);
         ctrlAltDelBtn.addEventListener('click', sendCtrlAltDel);
         document.getElementById('screenshot_btn').addEventListener('click', takeScreenshot);
-        document.getElementById('clipboard_btn').addEventListener('click', copyClipboard);
         document.getElementById('alttab_btn').addEventListener('click', sendAltTab);
         document.getElementById('super_btn').addEventListener('click', sendSuper);
 
@@ -595,7 +569,6 @@
         </div>
         <div id="buttons">
             <button class="toolbar_btn" id="screenshot_btn" title="Save screenshot">Screenshot</button>
-            <button class="toolbar_btn" id="clipboard_btn" title="Copy VNC clipboard to host">Clipboard</button>
             <button class="toolbar_btn" id="alttab_btn" title="Send Alt+Tab">Alt+Tab</button>
             <button class="toolbar_btn" id="super_btn" title="Send Super/Windows key">Super</button>
             <button class="toolbar_btn" id="fullscreen_btn" title="Fullscreen (F11)">Fullscreen</button>

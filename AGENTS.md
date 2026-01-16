@@ -284,7 +284,7 @@ When updating, add a dated entry in this section:
 - *2026-01-16*: **Comprehensive Architecture Audit** - Full codebase audit covering infrastructure, shell-ui, and documentation. Updated `docs/COMPONENTS.md` for React architecture, updated `docs/PROJECT_STATUS.md` marking React migration complete, created `docs/ROADMAP.md` with phased development plan. Key findings: main.js needs modularization (900 lines), duplicate SSE handling in hooks, missing error boundary, unused code (useAutoFade, parseCommand).
 - *2026-01-16*: **Phase 1 Cleanup Complete** - Modularized `main.js` from 900 to 140 lines by extracting 7 focused modules (config, api-client, sse-handler, window-manager, polling, launcher, ipc-handlers). Removed unused TypeScript files (useAutoFade, parseCommand). Removed unused config directories (labwc, foot, alacritty). Created shared shell library (`scripts/tools/lib/window-utils.sh`) and refactored 9 window scripts to use it.
 - *2026-01-16*: **Phase 2-3 Complete** - Added ErrorBoundary and ConnectionStatus components, consolidated SSE handling into useSession hook. Added 43 unit tests with Vitest + React Testing Library.
-- *2026-01-16*: **Phase 4 noVNC Complete** - Replaced Reset button with Screenshot, Clipboard, Alt+Tab, and Super key toolbar buttons. Added clipboard CLI tools (`clipboard-read.sh`, `clipboard-write.sh`).
+- *2026-01-16*: **Phase 4 noVNC Complete** - Replaced Reset button with Screenshot, Alt+Tab, and Super key toolbar buttons. Clipboard button deferred (noVNC clipboard event not firing reliably with x11vnc). Added clipboard CLI tools (`clipboard-read.sh`, `clipboard-write.sh`).
 
 ---
 

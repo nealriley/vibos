@@ -299,15 +299,18 @@ Add ability to capture canvas element as image:
 - [x] Implement download functionality (PNG with timestamp)
 - [x] Test across browsers
 
-### 4.2 Clipboard Integration
+### 4.2 Clipboard Integration (Deferred)
 
 Pull clipboard contents from VNC session:
 
+**Status**: Deferred - noVNC clipboard event not firing reliably with x11vnc. Needs investigation into x11vnc CLIPBOARD/PRIMARY selection sync or alternative approach.
+
 **Tasks**:
 - [x] Research noVNC clipboard API
-- [x] Add "Copy from VNC" button to toolbar
-- [x] Auto-copy to host clipboard on click
-- [x] Show feedback notification on success
+- [ ] Investigate x11vnc clipboard sync configuration
+- [ ] Add "Copy from VNC" button to toolbar
+- [ ] Auto-copy to host clipboard on click
+- [ ] Show feedback notification on success
 
 ### 4.3 Key Command Buttons
 
@@ -673,7 +676,7 @@ Show icons when main window hidden:
 ### Phase 4-5 Completion Criteria (noVNC & Shell UI)
 
 - [x] Screenshot button works in beta.html
-- [x] Clipboard copy from VNC works
+- [ ] Clipboard copy from VNC works (deferred - needs x11vnc investigation)
 - [x] Alt+Tab and Super key buttons work
 - [ ] At least 2 shell UI templates available
 - [ ] Template switching works at runtime
