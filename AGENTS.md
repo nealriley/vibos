@@ -71,7 +71,15 @@ make status   # Check supervisorctl status
 - `scripts/entrypoint.sh` - Container initialization script
 
 ### Shell UI (Electron App - React + TypeScript)
-- `shell-ui/main.js` - Main process (OpenCode client, SSE, window management)
+- `shell-ui/main.js` - Main process entry point (orchestration only, ~140 lines)
+- `shell-ui/src/main/` - Main process modules:
+  - `config.js` - Configuration constants and safe logging
+  - `api-client.js` - OpenCode HTTP client functions
+  - `sse-handler.js` - SSE subscription and event handling
+  - `window-manager.js` - Icon and main window management
+  - `polling.js` - Window list and command signal polling
+  - `launcher.js` - App and terminal launching
+  - `ipc-handlers.js` - IPC handler registration
 - `shell-ui/preload.js` - IPC bridge (exposes `window.vibeos` API)
 - `shell-ui/icon.html` - Taskbar/dock icon UI (vanilla JS)
 - `shell-ui/index.html` - Vite entry point for React app
@@ -79,8 +87,8 @@ make status   # Check supervisorctl status
   - `src/App.tsx` - Root component
   - `src/main.tsx` - React entry point
   - `src/components/` - UI components (Message, Feed, Input, Tool, Status, Layout)
-  - `src/hooks/` - Custom hooks (useSession, useSSE, useAutoFade)
-  - `src/lib/` - Utilities (api, cn, markdown, parseCommand)
+  - `src/hooks/` - Custom hooks (useSession, useSSE)
+  - `src/lib/` - Utilities (api, cn, markdown)
   - `src/types/` - TypeScript types (message, vibeos.d.ts)
   - `src/styles/globals.css` - Tailwind CSS + theme variables
 - `shell-ui/dist/` - Built React app (loaded by Electron)
@@ -274,6 +282,7 @@ When updating, add a dated entry in this section:
 - *2026-01-14*: Removed repo-local OpenCode agents/skills (`.opencode/`) and reverted `config/opencode/opencode.json` to auto-approve-only config.
 - *2026-01-14*: Fixed shell UI window/background and layout: enforce fullscreen opaque window, center the chat column, and place input at the bottom with messages above.
 - *2026-01-16*: **Comprehensive Architecture Audit** - Full codebase audit covering infrastructure, shell-ui, and documentation. Updated `docs/COMPONENTS.md` for React architecture, updated `docs/PROJECT_STATUS.md` marking React migration complete, created `docs/ROADMAP.md` with phased development plan. Key findings: main.js needs modularization (900 lines), duplicate SSE handling in hooks, missing error boundary, unused code (useAutoFade, parseCommand).
+- *2026-01-16*: **Phase 1 Cleanup Complete** - Modularized `main.js` from 900 to 140 lines by extracting 7 focused modules (config, api-client, sse-handler, window-manager, polling, launcher, ipc-handlers). Removed unused TypeScript files (useAutoFade, parseCommand). Removed unused config directories (labwc, foot, alacritty). Created shared shell library (`scripts/tools/lib/window-utils.sh`) and refactored 9 window scripts to use it.
 
 ---
 

@@ -21,7 +21,16 @@ The shell UI is an Electron application with a React + TypeScript frontend that 
 
 ```
 /home/vibe/shell-ui/
-├── main.js              # Electron main process
+├── main.js              # Electron main process (orchestration, ~140 lines)
+├── src/
+│   └── main/            # Main process modules
+│       ├── config.js        # Configuration and constants
+│       ├── api-client.js    # OpenCode HTTP client
+│       ├── sse-handler.js   # SSE subscription/events
+│       ├── window-manager.js # Window creation/management
+│       ├── polling.js       # Window and command polling
+│       ├── launcher.js      # App/terminal launching
+│       └── ipc-handlers.js  # IPC handler registration
 ├── preload.js           # IPC bridge (contextBridge)
 ├── icon.html            # Taskbar dock UI (vanilla JS)
 ├── index.html           # Vite entry point
@@ -32,8 +41,8 @@ The shell UI is an Electron application with a React + TypeScript frontend that 
 │   ├── main.tsx         # React entry point
 │   ├── App.tsx          # Root component
 │   ├── components/      # UI components
-│   ├── hooks/           # Custom React hooks
-│   ├── lib/             # Utilities
+│   ├── hooks/           # Custom React hooks (useSession, useSSE)
+│   ├── lib/             # Utilities (api, cn, markdown)
 │   ├── types/           # TypeScript definitions
 │   └── styles/          # CSS
 ├── package.json         # Dependencies
