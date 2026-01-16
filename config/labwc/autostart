@@ -1,8 +1,0 @@
-# VibeOS Labwc Autostart
-# Launch the shell UI on compositor start
-
-# Wait for compositor to be ready
-sleep 1
-
-# Launch VibeOS shell
-cd /home/vibe/shell-ui && npm start &
