@@ -75,6 +75,14 @@ RUN apt-get update && \
         # Clipboard tools
         xclip \
         xsel \
+        # Media tools
+        ffmpeg \
+        feh \
+        evince \
+        # System utilities
+        htop \
+        tree \
+        ripgrep \
         # File manager
         pcmanfm \
         # Text editor
