@@ -3,7 +3,7 @@
 # Usage:
 #   make build     - Build Docker image
 #   make run       - Run container in background
-#   make dev       - Run with docker-compose (logs visible)
+#   make dev       - Run with docker compose (logs visible)
 #   make stop      - Stop and remove container
 #   make logs      - View container logs
 #   make shell     - Open root shell in container
@@ -12,7 +12,7 @@
 #   make help      - Show this help
 
 .PHONY: build build-fresh run dev dev-fg stop clean logs shell shell-user \
-        status restart test-ui install-ui help
+        status restart test-ui install-ui help test test-remote test-automation
 
 # Configuration
 IMAGE_NAME := vibeos
@@ -52,6 +52,7 @@ run: stop
 		--name $(CONTAINER_NAME) \
 		-p 6080:6080 \
 		-p 5900:5900 \
+		-p 4096:4096 \
 		-e RESOLUTION=$(RESOLUTION) \
 		--shm-size=2g \
 		--security-opt seccomp=unconfined \
@@ -61,18 +62,18 @@ run: stop
 	@echo "Open $(CYAN)http://localhost:6080/vnc.html$(NC) in your browser"
 	@echo ""
 
-## Run with docker-compose (detached)
+## Run with docker compose (detached)
 dev:
-	docker-compose up -d --build
+	docker compose up -d --build
 	@echo ""
 	@echo "$(GREEN)=== VibeOS is starting ===$(NC)"
 	@echo "Open $(CYAN)http://localhost:6080/vnc.html$(NC) in your browser"
 	@echo "Run 'make logs' to view logs"
 	@echo ""
 
-## Run with docker-compose (foreground with logs)
+## Run with docker compose (foreground with logs)
 dev-fg:
-	docker-compose up --build --force-recreate
+	docker compose up --build --force-recreate
 
 ## Run with project directory mounted
 run-with-projects: stop
@@ -158,6 +159,32 @@ test-ui-dev:
 	cd shell-ui && VIBEOS_DEV=1 npm start
 
 #------------------------------------------------------------------------------
+# Testing
+#------------------------------------------------------------------------------
+
+## Run all tests (requires running container)
+test: test-remote test-automation
+	@echo "$(GREEN)All tests complete!$(NC)"
+
+## Run remote API tests (from host)
+test-remote:
+	@echo "$(CYAN)Running remote API tests...$(NC)"
+	@./tests/run-tests.sh remote
+
+## Run in-container automation tests
+test-automation:
+	@echo "$(CYAN)Running automation tests inside container...$(NC)"
+	@docker exec -e DISPLAY=:0 $(CONTAINER_NAME) /home/vibe/tests/run-tests.sh automation
+
+## Run a specific test file
+test-file:
+	@if [ -z "$(FILE)" ]; then \
+		echo "Usage: make test-file FILE=tests/remote/test-api.sh"; \
+	else \
+		./tests/run-tests.sh $(FILE); \
+	fi
+
+#------------------------------------------------------------------------------
 # Debugging
 #------------------------------------------------------------------------------
 
@@ -196,7 +223,7 @@ help:
 	@echo ""
 	@echo "$(GREEN)Run:$(NC)"
 	@echo "  make run            Run container in background"
-	@echo "  make dev            Run with docker-compose"
+	@echo "  make dev            Run with docker compose"
 	@echo "  make dev-fg         Run with logs in foreground"
 	@echo ""
 	@echo "$(GREEN)Container:$(NC)"
@@ -206,6 +233,11 @@ help:
 	@echo "  make shell-user     Open shell as vibe user"
 	@echo "  make status         Check service status"
 	@echo "  make restart        Restart all services"
+	@echo ""
+	@echo "$(GREEN)Testing:$(NC)"
+	@echo "  make test           Run all tests"
+	@echo "  make test-remote    Run remote API tests"
+	@echo "  make test-automation Run in-container tests"
 	@echo ""
 	@echo "$(GREEN)Cleanup:$(NC)"
 	@echo "  make clean          Remove container and image"
@@ -217,7 +249,7 @@ help:
 	@echo "  make ps             Show running processes"
 	@echo ""
 	@echo "$(GREEN)Access:$(NC)"
-	@echo "  Browser: $(CYAN)http://localhost:6080/vnc.html$(NC)"
+	@echo "  Browser: $(CYAN)http://localhost:6080/beta.html$(NC)"
 	@echo "  VNC:     $(CYAN)vnc://localhost:5900$(NC)"
 	@echo ""
 

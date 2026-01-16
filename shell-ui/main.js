@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, globalShortcut, screen } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 const EventSource = require('eventsource');
 
 // Disable sandbox for container environments
@@ -14,7 +15,31 @@ let iconWindow = null;
 let currentSessionId = null;
 let eventSource = null;
 let windowPollInterval = null;
+let commandPollInterval = null;
 let lastWindowList = [];
+
+// Track whether we're expecting a local response (for external message detection)
+let expectingLocalResponse = false;
+
+// Safe logging that won't crash on EPIPE errors
+function safeLog(...args) {
+  try {
+    console.log(...args);
+  } catch (e) {
+    // Ignore EPIPE and other write errors
+  }
+}
+
+function safeError(...args) {
+  try {
+    console.error(...args);
+  } catch (e) {
+    // Ignore EPIPE and other write errors
+  }
+}
+
+// File-based command signal for external communication (e.g., from beta.html)
+const COMMAND_SIGNAL_FILE = '/tmp/vibeos-command';
 
 // Configuration
 const config = {
@@ -56,13 +81,13 @@ async function checkServerHealth() {
 async function waitForServer(maxAttempts = 30, intervalMs = 1000) {
   for (let i = 0; i < maxAttempts; i++) {
     if (await checkServerHealth()) {
-      console.log('OpenCode server is ready');
+      safeLog('OpenCode server is ready');
       return true;
     }
-    console.log(`Waiting for OpenCode server... (${i + 1}/${maxAttempts})`);
+    safeLog(`Waiting for OpenCode server... (${i + 1}/${maxAttempts})`);
     await new Promise(resolve => setTimeout(resolve, intervalMs));
   }
-  console.error('OpenCode server did not become ready');
+  safeError('OpenCode server did not become ready');
   return false;
 }
 
@@ -80,12 +105,12 @@ async function getOrCreateSession(title = 'desktop') {
   // Check if a session with this title already exists
   const existing = await findSessionByTitle(title);
   if (existing) {
-    console.log(`Found existing session: ${existing.id} (${title})`);
+    safeLog(`Found existing session: ${existing.id} (${title})`);
     return existing;
   }
   // Create a new session
   const session = await createSession(title);
-  console.log(`Created new session: ${session.id} (${title})`);
+  safeLog(`Created new session: ${session.id} (${title})`);
   return session;
 }
 
@@ -107,6 +132,57 @@ async function abortSession(sessionId) {
   return await opencodeRequest('POST', `/session/${sessionId}/abort`);
 }
 
+async function deleteSession(sessionId) {
+  // OpenCode may not have a DELETE endpoint, so we'll handle gracefully
+  try {
+    const url = `${config.opencodeUrl}/session/${sessionId}`;
+    const response = await fetch(url, { method: 'DELETE' });
+    // Accept 200, 204, or 404 (already deleted) as success
+    return response.ok || response.status === 404;
+  } catch (e) {
+    safeLog('Delete session failed (may not be supported):', e.message);
+    return false;
+  }
+}
+
+async function resetDesktopSession() {
+  safeLog('Resetting desktop session...');
+  
+  // 1. Close existing SSE connection
+  if (eventSource) {
+    eventSource.close();
+    eventSource = null;
+  }
+  
+  // 2. Try to delete existing desktop session
+  if (currentSessionId) {
+    await abortSession(currentSessionId).catch(() => {});
+    await deleteSession(currentSessionId);
+  }
+  
+  // 3. Find and delete any other "desktop" sessions
+  try {
+    const sessions = await opencodeRequest('GET', '/session');
+    for (const session of sessions) {
+      if (session.title === 'desktop') {
+        await deleteSession(session.id);
+      }
+    }
+  } catch (e) {
+    safeLog('Error cleaning up sessions:', e.message);
+  }
+  
+  // 4. Create a fresh desktop session
+  const newSession = await createSession('desktop');
+  currentSessionId = newSession.id;
+  safeLog(`Created fresh desktop session: ${newSession.id}`);
+  
+  // 5. Re-subscribe to events
+  subscribeToEvents();
+  
+  return { success: true, session: newSession, messages: [] };
+}
+
 // ============================================================================
 // Server-Sent Events for streaming
 // ============================================================================
@@ -118,27 +194,25 @@ function subscribeToEvents() {
   }
   
   const url = `${config.opencodeUrl}/event`;
-  console.log('Subscribing to OpenCode events:', url);
+  safeLog('Subscribing to OpenCode events:', url);
   
   // Use EventSource for SSE (more reliable than fetch-based approach)
   eventSource = new EventSource(url);
   
   eventSource.onopen = () => {
-    console.log('SSE connection opened');
+    safeLog('SSE connection opened');
   };
   
   eventSource.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
-      console.log('SSE event received:', data.type);
       handleServerEvent(data);
     } catch (e) {
-      console.error('Failed to parse SSE event:', e);
+      // Silently ignore parse errors
     }
   };
   
-  eventSource.onerror = (err) => {
-    console.error('SSE connection error:', err);
+  eventSource.onerror = () => {
     eventSource.close();
     eventSource = null;
     // Reconnect after a delay
@@ -148,18 +222,35 @@ function subscribeToEvents() {
 
 function handleServerEvent(event) {
   if (!mainWindow) {
-    console.log('No main window, ignoring event');
     return;
   }
   
-  // Forward relevant events to the renderer
-  const eventType = event.type || event.event;
+  // Check if this is a user message creation event
+  // If we weren't expecting a local response, it's an external message
+  if (event.type === 'message.created' && event.properties?.info?.role === 'user') {
+    const isExternal = !expectingLocalResponse;
+    expectingLocalResponse = false; // Reset the flag
+    
+    // Add isExternal flag to the event
+    const enrichedEvent = {
+      ...event,
+      isExternal
+    };
+    
+    try {
+      mainWindow.webContents.send('opencode-event', enrichedEvent);
+    } catch (e) {
+      // Ignore send errors
+    }
+    return;
+  }
   
-  // Log all events for debugging
-  console.log('Forwarding event to renderer:', eventType);
-  
-  // Forward all events to the renderer
-  mainWindow.webContents.send('opencode-event', event);
+  // Forward all other events to the renderer unchanged
+  try {
+    mainWindow.webContents.send('opencode-event', event);
+  } catch (e) {
+    // Ignore send errors (window may be closing)
+  }
 }
 
 // ============================================================================
@@ -222,7 +313,7 @@ function getRunningWindows() {
     
     return windows;
   } catch (e) {
-    console.error('Failed to get window list:', e.message);
+    safeError('Failed to get window list:', e.message);
     return [];
   }
 }
@@ -248,7 +339,7 @@ function startWindowPolling() {
         iconWindow.webContents.send('windows-update', windows);
       }
       
-      console.log('Windows changed:', windows.length, 'windows');
+      safeLog('Windows changed:', windows.length, 'windows');
     }
   }, 1000); // Poll every second
 }
@@ -260,6 +351,72 @@ function stopWindowPolling() {
   }
 }
 
+// ============================================================================
+// Command Signal Polling (for external communication from beta.html)
+// ============================================================================
+
+function startCommandPolling() {
+  if (commandPollInterval) return;
+  
+  commandPollInterval = setInterval(async () => {
+    try {
+      if (!fs.existsSync(COMMAND_SIGNAL_FILE)) return;
+      
+      const command = fs.readFileSync(COMMAND_SIGNAL_FILE, 'utf8').trim();
+      
+      // Delete the file immediately to prevent re-processing
+      fs.unlinkSync(COMMAND_SIGNAL_FILE);
+      
+      if (!command) return;
+      
+      safeLog('Received command signal:', command);
+      
+      // Handle commands
+      switch (command) {
+        case 'reset':
+          await resetDesktopSession();
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('session-reset');
+          }
+          safeLog('Session reset via command signal');
+          break;
+        
+        case 'show':
+          if (mainWindow && !mainWindow.isVisible()) {
+            mainWindow.show();
+            mainWindow.focus();
+          }
+          break;
+        
+        case 'hide':
+          if (mainWindow && mainWindow.isVisible()) {
+            mainWindow.hide();
+          }
+          break;
+        
+        case 'toggle':
+          toggleMainWindow();
+          break;
+        
+        default:
+          safeLog('Unknown command signal:', command);
+      }
+    } catch (e) {
+      // Ignore errors (file may not exist or be locked)
+      if (e.code !== 'ENOENT') {
+        safeError('Command polling error:', e.message);
+      }
+    }
+  }, 500); // Poll every 500ms
+}
+
+function stopCommandPolling() {
+  if (commandPollInterval) {
+    clearInterval(commandPollInterval);
+    commandPollInterval = null;
+  }
+}
+
 function focusWindowById(windowId) {
   try {
     execSync(`xdotool windowactivate ${windowId}`, {
@@ -267,7 +424,7 @@ function focusWindowById(windowId) {
     });
     return true;
   } catch (e) {
-    console.error('Failed to focus window:', e.message);
+    safeError('Failed to focus window:', e.message);
     return false;
   }
 }
@@ -279,7 +436,7 @@ function closeWindowById(windowId) {
     });
     return true;
   } catch (e) {
-    console.error('Failed to close window:', e.message);
+    safeError('Failed to close window:', e.message);
     return false;
   }
 }
@@ -310,7 +467,7 @@ function launchApp(appName) {
 
   const executable = apps[appName] || appName;
   
-  console.log(`Launching app: ${executable}`);
+  safeLog(`Launching app: ${executable}`);
   
   const proc = spawn(executable, [], {
     detached: true,
@@ -327,7 +484,7 @@ function launchApp(appName) {
     setTimeout(() => {
       if (mainWindow && mainWindow.isVisible()) {
         mainWindow.hide();
-        console.log('Main window auto-hidden after app launch');
+        safeLog('Main window auto-hidden after app launch');
       }
     }, 300);
   }
@@ -354,7 +511,7 @@ function launchTerminal(command) {
       args = ['-e', command];
   }
   
-  console.log(`Launching terminal: ${config.terminal} ${args.join(' ')}`);
+  safeLog(`Launching terminal: ${config.terminal} ${args.join(' ')}`);
   
   const proc = spawn(config.terminal, args, {
     detached: true,
@@ -438,7 +595,7 @@ function createIconWindow() {
     iconWindow.setPosition(10, yPos);
     iconWindow.show();
     iconWindow.setAlwaysOnTop(true, 'screen-saver');
-    console.log('Icon window loaded, positioned at:', 10, yPos);
+    safeLog('Icon window loaded, positioned at:', 10, yPos);
     
     // Send initial empty window list
     iconWindow.webContents.send('windows-update', []);
@@ -448,7 +605,7 @@ function createIconWindow() {
     iconWindow = null;
   });
   
-  console.log('Icon window created, target position:', 10, height - TASKBAR_HEIGHT - 10);
+  safeLog('Icon window created, target position:', 10, height - TASKBAR_HEIGHT - 10);
 }
 
 // Resize the taskbar based on number of windows
@@ -467,7 +624,7 @@ function resizeTaskbar(windowCount) {
       width: newWidth,
       height: TASKBAR_HEIGHT
     });
-    console.log('Taskbar resized to:', newWidth, 'for', windowCount, 'windows');
+    safeLog('Taskbar resized to:', newWidth, 'for', windowCount, 'windows');
   }
 }
 
@@ -477,11 +634,11 @@ function toggleMainWindow() {
   
   if (mainWindow.isVisible()) {
     mainWindow.hide();
-    console.log('Main window hidden');
+    safeLog('Main window hidden');
   } else {
     mainWindow.show();
     mainWindow.focus();
-    console.log('Main window shown');
+    safeLog('Main window shown');
   }
   
   // Always ensure icon stays on top after any toggle
@@ -492,14 +649,19 @@ function toggleMainWindow() {
 
 // Create the main conversation window
 function createWindow() {
+  const { bounds } = screen.getPrimaryDisplay();
+
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
     frame: false,
-    transparent: true,
+    transparent: false,
     alwaysOnTop: false,
     fullscreen: true,
-    backgroundColor: '#00000000',
+    backgroundColor: '#09090b',
+    show: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -507,7 +669,23 @@ function createWindow() {
     }
   });
 
-  mainWindow.loadFile('index.html');
+  mainWindow.setMenuBarVisibility(false);
+
+  // Load the built React app from dist/, fallback to index.html for dev
+  const distIndex = path.join(__dirname, 'dist', 'index.html');
+  if (fs.existsSync(distIndex)) {
+    mainWindow.loadFile(distIndex);
+  } else {
+    mainWindow.loadFile('index.html');
+  }
+
+  // Some Linux WMs ignore fullscreen hints on first map; enforce it after paint.
+  mainWindow.once('ready-to-show', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    mainWindow.setBounds(bounds);
+    mainWindow.setFullScreen(true);
+    mainWindow.show();
+  });
   
   if (config.showDevTools) {
     mainWindow.webContents.openDevTools({ mode: 'detach' });
@@ -543,7 +721,7 @@ ipcMain.handle('init-session', async () => {
     
     return { success: true, session, messages };
   } catch (e) {
-    console.error('Failed to initialize session:', e);
+    safeError('Failed to initialize session:', e);
     return { success: false, error: e.message };
   }
 });
@@ -564,6 +742,9 @@ ipcMain.handle('submit-input', async (event, input) => {
         return { success: false, error: 'No active session' };
       }
       try {
+        // Mark that we're expecting a local response (for external message detection)
+        expectingLocalResponse = true;
+        
         // Send message to OpenCode synchronously and get response
         const response = await fetch(`${config.opencodeUrl}/session/${currentSessionId}/message`, {
           method: 'POST',
@@ -580,7 +761,7 @@ ipcMain.handle('submit-input', async (event, input) => {
         const result = await response.json();
         return { success: true, type: 'opencode', prompt: parsed.prompt, response: result };
       } catch (e) {
-        console.error('Failed to send message:', e);
+        safeError('Failed to send message:', e);
         return { success: false, error: e.message };
       }
     
@@ -591,16 +772,16 @@ ipcMain.handle('submit-input', async (event, input) => {
 
 // Get conversation history
 ipcMain.handle('get-messages', async () => {
-  console.log('get-messages called, sessionId:', currentSessionId);
+  safeLog('get-messages called, sessionId:', currentSessionId);
   if (!currentSessionId) {
     return { success: false, error: 'No active session' };
   }
   try {
     const messages = await getSessionMessages(currentSessionId);
-    console.log('get-messages returning', messages.length, 'messages');
+    safeLog('get-messages returning', messages.length, 'messages');
     return { success: true, messages };
   } catch (e) {
-    console.error('get-messages error:', e);
+    safeError('get-messages error:', e);
     return { success: false, error: e.message };
   }
 });
@@ -614,6 +795,21 @@ ipcMain.handle('abort', async () => {
     await abortSession(currentSessionId);
     return { success: true };
   } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
+// Reset session - clears history and starts fresh
+ipcMain.handle('reset-session', async () => {
+  try {
+    const result = await resetDesktopSession();
+    // Notify renderer to refresh
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('session-reset');
+    }
+    return result;
+  } catch (e) {
+    safeError('Failed to reset session:', e);
     return { success: false, error: e.message };
   }
 });
@@ -652,6 +848,8 @@ app.whenReady().then(() => {
     createIconWindow();
     // Start polling for running windows (for taskbar)
     startWindowPolling();
+    // Start polling for external command signals
+    startCommandPolling();
   }, 500);
 
   // Register global shortcut to toggle main window
@@ -673,6 +871,7 @@ app.whenReady().then(() => {
       setTimeout(() => {
         createIconWindow();
         startWindowPolling();
+        startCommandPolling();
       }, 500);
     }
   });
@@ -681,6 +880,7 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   globalShortcut.unregisterAll();
   stopWindowPolling();
+  stopCommandPolling();
   if (eventSource) {
     eventSource.close();
   }
@@ -692,6 +892,7 @@ app.on('window-all-closed', () => {
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
   stopWindowPolling();
+  stopCommandPolling();
   if (eventSource) {
     eventSource.close();
   }

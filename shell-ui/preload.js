@@ -12,8 +12,10 @@
  *   - submitInput(text)    Send user input (!app, $shell, or prompt)
  *   - getMessages()        Fetch conversation history
  *   - abort()              Stop current AI response generation
+ *   - resetSession()       Clear session history and start fresh
  *   - getConfig()          Get application configuration
  *   - onOpencodeEvent(cb)  Subscribe to SSE events for streaming
+ *   - onSessionReset(cb)   Subscribe to session reset events
  * 
  * Icon/Taskbar API (icon.html):
  *   - toggleMainWindow()   Show/hide the main conversation window
@@ -60,6 +62,12 @@ contextBridge.exposeInMainWorld('vibeos', {
   abort: () => ipcRenderer.invoke('abort'),
   
   /**
+   * Reset the session - clears all messages and starts fresh
+   * @returns {Promise<{success: boolean, session?: object, messages?: array, error?: string}>}
+   */
+  resetSession: () => ipcRenderer.invoke('reset-session'),
+  
+  /**
    * Get application configuration
    * @returns {Promise<{terminal: string, opencodeUrl: string, showDevTools: boolean}>}
    */
@@ -79,6 +87,14 @@ contextBridge.exposeInMainWorld('vibeos', {
    */
   removeOpencodeEventListener: () => {
     ipcRenderer.removeAllListeners('opencode-event');
+  },
+  
+  /**
+   * Subscribe to session reset events (triggered by external commands)
+   * @param {function} callback - Called when session is reset externally
+   */
+  onSessionReset: (callback) => {
+    ipcRenderer.on('session-reset', () => callback());
   },
   
   // ============================================================================

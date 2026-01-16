@@ -484,10 +484,36 @@
             }
         }
 
+        // Reset session - sends Super+Shift+R key combination via VNC
+        // This triggers the reset handler in the shell-ui
+        function resetSession() {
+            if (rfb) {
+                // Send Super+Shift+R key combination
+                // KeySyms: Super_L=0xffeb, Shift_L=0xffe1, r=0x0072
+                rfb.sendKey(0xffeb, 'Super_L', true);   // Super down
+                rfb.sendKey(0xffe1, 'Shift_L', true);   // Shift down
+                rfb.sendKey(0x0072, 'r', true);         // r down
+                rfb.sendKey(0x0072, 'r', false);        // r up
+                rfb.sendKey(0xffe1, 'Shift_L', false);  // Shift up
+                rfb.sendKey(0xffeb, 'Super_L', false);  // Super up
+                
+                // Show brief confirmation
+                const btn = document.getElementById('reset_btn');
+                const originalText = btn.textContent;
+                btn.textContent = 'Resetting...';
+                btn.disabled = true;
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }, 1500);
+            }
+        }
+
         // Button handlers
         retryBtn.addEventListener('click', retryNow);
         fullscreenBtn.addEventListener('click', toggleFullscreen);
         ctrlAltDelBtn.addEventListener('click', sendCtrlAltDel);
+        document.getElementById('reset_btn').addEventListener('click', resetSession);
 
         // Keyboard shortcut: F11 for fullscreen
         document.addEventListener('keydown', (e) => {
@@ -513,6 +539,7 @@
             <span id="status_text">Connecting...</span>
         </div>
         <div id="buttons">
+            <button class="toolbar_btn" id="reset_btn" title="Reset session (Super+Shift+R)">Reset</button>
             <button class="toolbar_btn" id="fullscreen_btn" title="Fullscreen (F11)">Fullscreen</button>
             <button class="toolbar_btn" id="cad_btn" title="Send Ctrl+Alt+Delete">Ctrl+Alt+Del</button>
         </div>

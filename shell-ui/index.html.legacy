@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VibeOS</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-color: #0a0a0a;
+      --surface-color: #1a1a1a;
+      --surface-hover: #252525;
+      --border-color: #333;
+      --text-color: #e0e0e0;
+      --text-muted: #888;
+      --text-dim: #666;
+      --accent-color: #7c3aed;
+      --accent-glow: rgba(124, 58, 237, 0.3);
+      --success-color: #22c55e;
+      --error-color: #ef4444;
+      --warning-color: #f59e0b;
+      --user-bg: #1e1b4b;
+      --assistant-bg: #1a1a1a;
+      --tool-bg: #0f172a;
+      --code-bg: #0d1117;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header Section */
+    .header {
+      padding: 24px 32px 16px;
+      text-align: center;
+      flex-shrink: 0;
+      -webkit-app-region: drag;
+    }
+
+    .header h1 {
+      font-size: 20px;
+      font-weight: 300;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      color: var(--text-color);
+      opacity: 0.9;
+    }
+
+    .header .tagline {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      letter-spacing: 1px;
+    }
+
+    /* Prompt Section */
+    .prompt-section {
+      padding: 0 32px 16px;
+      flex-shrink: 0;
+      -webkit-app-region: no-drag;
+    }
+
+    .prompt-container {
+      max-width: 900px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .prompt-input {
+      width: 100%;
+      padding: 16px 50px 16px 20px;
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--text-color);
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      outline: none;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .prompt-input::placeholder {
+      color: var(--text-dim);
+    }
+
+    .prompt-input:focus {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .prompt-input:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .send-button {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 34px;
+      height: 34px;
+      border: none;
+      background: var(--accent-color);
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .send-button:hover {
+      background: #8b5cf6;
+    }
+
+    .send-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .send-button svg {
+      width: 18px;
+      height: 18px;
+      fill: white;
+    }
+
+    .stop-button {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 34px;
+      height: 34px;
+      border: none;
+      background: var(--error-color);
+      border-radius: 8px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .stop-button:hover {
+      background: #dc2626;
+    }
+
+    .stop-button svg {
+      width: 16px;
+      height: 16px;
+      fill: white;
+    }
+
+    .stop-button.visible {
+      display: flex;
+    }
+
+    .send-button.hidden {
+      display: none;
+    }
+
+    .hints {
+      margin-top: 8px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .hints kbd {
+      display: inline-block;
+      padding: 2px 5px;
+      margin: 0 2px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: 3px;
+    }
+
+    /* Conversation Section */
+    .conversation-section {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      padding: 0 32px 24px;
+    }
+
+    .conversation-container {
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    .conversation-container::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .conversation-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .conversation-container::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 3px;
+    }
+
+    .conversation-container::-webkit-scrollbar-thumb:hover {
+      background: var(--text-dim);
+    }
+
+    /* Empty state */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-dim);
+      text-align: center;
+      padding: 40px;
+    }
+
+    .empty-state .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+      max-width: 400px;
+      line-height: 1.6;
+    }
+
+    /* Load more button */
+    .load-more {
+      text-align: center;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+
+    .load-more-btn {
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .load-more-btn:hover {
+      background: var(--surface-hover);
+      color: var(--text-color);
+    }
+
+    /* Messages */
+    .message {
+      margin-bottom: 16px;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .message-role {
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .message-role.user {
+      color: var(--accent-color);
+    }
+
+    .message-role.assistant {
+      color: var(--success-color);
+    }
+
+    .message-time {
+      color: var(--text-dim);
+      font-weight: 400;
+    }
+
+    .message-content {
+      padding: 16px;
+      border-radius: 12px;
+      line-height: 1.6;
+    }
+
+    .message.user .message-content {
+      background: var(--user-bg);
+      border: 1px solid rgba(124, 58, 237, 0.2);
+    }
+
+    .message.assistant .message-content {
+      background: var(--assistant-bg);
+      border: 1px solid var(--border-color);
+    }
+
+    /* Markdown content */
+    .message-content p {
+      margin-bottom: 12px;
+    }
+
+    .message-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    .message-content code {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 13px;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .message-content pre {
+      background: var(--code-bg);
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      margin: 12px 0;
+    }
+
+    .message-content pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .message-content ul, .message-content ol {
+      margin: 12px 0;
+      padding-left: 24px;
+    }
+
+    .message-content li {
+      margin: 4px 0;
+    }
+
+    .message-content a {
+      color: var(--accent-color);
+      text-decoration: none;
+    }
+
+    .message-content a:hover {
+      text-decoration: underline;
+    }
+
+    /* Tool calls */
+    .tool-call {
+      margin: 12px 0;
+      background: var(--tool-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .tool-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .tool-header:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tool-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .tool-icon {
+      width: 16px;
+      height: 16px;
+      opacity: 0.7;
+    }
+
+    .tool-status {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .tool-status.running {
+      background: rgba(245, 158, 11, 0.2);
+      color: var(--warning-color);
+    }
+
+    .tool-status.completed {
+      background: rgba(34, 197, 94, 0.2);
+      color: var(--success-color);
+    }
+
+    .tool-status.error {
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--error-color);
+    }
+
+    .tool-content {
+      display: none;
+      padding: 12px 14px;
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      max-height: 200px;
+      overflow: auto;
+      white-space: pre-wrap;
+      color: var(--text-muted);
+    }
+
+    .tool-call.expanded .tool-content {
+      display: block;
+    }
+
+    .tool-call.expanded .tool-header .expand-icon {
+      transform: rotate(180deg);
+    }
+
+    /* Thinking indicator */
+    .thinking {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 16px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .thinking-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .thinking-dots span {
+      width: 6px;
+      height: 6px;
+      background: var(--accent-color);
+      border-radius: 50%;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    .thinking-dots span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .thinking-dots span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Status bar */
+    .status-bar {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 8px 16px;
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .status-bar.visible {
+      opacity: 1;
+    }
+
+    .status-bar.error {
+      border-color: var(--error-color);
+      color: var(--error-color);
+    }
+
+    .status-bar.success {
+      border-color: var(--success-color);
+      color: var(--success-color);
+    }
+
+    /* Loading state */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .loading-overlay.hidden {
+      display: none;
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--accent-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      margin-top: 16px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    /* Background gradient */
+    .bg-gradient {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(124, 58, 237, 0.06) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: -1;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-gradient"></div>
+  
+  <!-- Loading overlay -->
+  <div class="loading-overlay" id="loading">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Connecting to OpenCode...</div>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <h1>VibeOS</h1>
+    <div class="tagline">What do you want to build?</div>
+  </div>
+
+  <!-- Prompt Input -->
+  <div class="prompt-section">
+    <div class="prompt-container">
+      <input 
+        type="text" 
+        class="prompt-input" 
+        id="prompt-input"
+        placeholder="Describe what you want to create..."
+        autocomplete="off"
+        disabled
+      >
+      <button class="send-button" id="send-button" disabled>
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+        </svg>
+      </button>
+      <button class="stop-button" id="stop-button" title="Stop generation (Esc)">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <rect x="6" y="6" width="12" height="12" rx="2"/>
+        </svg>
+      </button>
+    </div>
+    <div class="hints">
+      Press <kbd>Enter</kbd> to send &bull; 
+      <kbd>!</kbd>app to launch apps &bull; 
+      <kbd>$</kbd>cmd for shell &bull;
+      <kbd>Esc</kbd> to abort
+    </div>
+  </div>
+
+  <!-- Conversation -->
+  <div class="conversation-section">
+    <div class="conversation-container" id="conversation">
+      <div class="empty-state" id="empty-state">
+        <div class="icon">&#10024;</div>
+        <p>Start a conversation by typing what you want to build. I can help you write code, create files, run commands, and more.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="status-bar" id="status-bar"></div>
+
+  <script>
+    // ============================================================================
+    // DOM Elements
+    // ============================================================================
+    const loadingOverlay = document.getElementById('loading');
+    const promptInput = document.getElementById('prompt-input');
+    const sendButton = document.getElementById('send-button');
+    const stopButton = document.getElementById('stop-button');
+    const conversation = document.getElementById('conversation');
+    const emptyState = document.getElementById('empty-state');
+    const statusBar = document.getElementById('status-bar');
+
+    // ============================================================================
+    // State
+    // ============================================================================
+    const MESSAGE_LIMIT = 10;  // Show last N messages
+    let isWaitingForResponse = false;
+    let currentStreamingMessage = null;  // Element for streaming text updates
+    let currentStreamingMessageId = null;
+    let allMessages = [];  // Cache of all messages from server
+    let displayedCount = MESSAGE_LIMIT;  // How many messages are currently shown
+
+    // ============================================================================
+    // Markdown Parser
+    // ============================================================================
+    function parseMarkdown(text) {
+      if (!text) return '';
+      
+      let html = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      
+      html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+        return `<pre><code class="language-${lang}">${code.trim()}</code></pre>`;
+      });
+      
+      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+      html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+      html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+      html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+      html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+      html = html.replace(/^[*-] (.+)$/gm, '<li>$1</li>');
+      html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+      html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+      html = html.replace(/\n\n/g, '</p><p>');
+      html = html.replace(/\n/g, '<br>');
+      
+      if (!html.startsWith('<')) {
+        html = '<p>' + html + '</p>';
+      }
+      
+      return html;
+    }
+
+    // ============================================================================
+    // Initialization
+    // ============================================================================
+    window.addEventListener('DOMContentLoaded', async () => {
+      const result = await window.vibeos.initSession();
+      
+      if (result.success) {
+        loadingOverlay.classList.add('hidden');
+        promptInput.disabled = false;
+        sendButton.disabled = false;
+        promptInput.focus();
+        
+        // Initial render of conversation
+        if (result.messages && result.messages.length > 0) {
+          allMessages = result.messages;
+          renderConversation();
+        }
+        
+        // Subscribe to SSE events
+        window.vibeos.onOpencodeEvent(handleOpencodeEvent);
+        
+        // Subscribe to session reset events (from external commands like beta.html)
+        window.vibeos.onSessionReset(handleSessionReset);
+      } else {
+        document.querySelector('.loading-text').textContent = 
+          `Failed to connect: ${result.error}`;
+        document.querySelector('.loading-text').style.color = 'var(--error-color)';
+      }
+    });
+
+    // ============================================================================
+    // Core Render Function - Single Source of Truth
+    // Messages are displayed newest-first (top), pushing older messages down
+    // ============================================================================
+    function renderConversation() {
+      // Clear conversation (keep empty state hidden)
+      conversation.innerHTML = '';
+      
+      if (allMessages.length === 0) {
+        // Show empty state
+        conversation.appendChild(emptyState);
+        emptyState.style.display = 'flex';
+        return;
+      }
+      
+      // Hide empty state
+      emptyState.style.display = 'none';
+      
+      // Calculate which messages to show (most recent N messages)
+      const startIndex = Math.max(0, allMessages.length - displayedCount);
+      const messagesToShow = allMessages.slice(startIndex);
+      
+      // Re-add thinking indicator at the TOP if we're waiting
+      if (isWaitingForResponse && !currentStreamingMessage) {
+        addThinkingIndicator();
+      }
+      
+      // Render messages in REVERSE order (newest first, at top)
+      for (let i = messagesToShow.length - 1; i >= 0; i--) {
+        const msg = messagesToShow[i];
+        if (msg.info.role === 'user') {
+          renderUserMessage(msg);
+        } else if (msg.info.role === 'assistant') {
+          renderAssistantMessage(msg);
+        }
+      }
+      
+      // Add "Load more" button at the BOTTOM if there are older messages
+      if (startIndex > 0) {
+        const loadMoreDiv = document.createElement('div');
+        loadMoreDiv.className = 'load-more';
+        loadMoreDiv.innerHTML = `
+          <button class="load-more-btn" onclick="loadMoreMessages()">
+            Load ${Math.min(MESSAGE_LIMIT, startIndex)} older messages
+          </button>
+        `;
+        conversation.appendChild(loadMoreDiv);
+      }
+      
+      scrollToTop();
+    }
+    
+    function loadMoreMessages() {
+      displayedCount += MESSAGE_LIMIT;
+      renderConversation();
+    }
+
+    // ============================================================================
+    // Message Rendering
+    // ============================================================================
+    function renderUserMessage(msg) {
+      const textPart = msg.parts.find(p => p.type === 'text');
+      if (!textPart || !textPart.text) return;
+      
+      const messageEl = document.createElement('div');
+      messageEl.className = 'message user';
+      messageEl.setAttribute('data-message-id', msg.info.id);
+      
+      const time = msg.info.time?.created ? new Date(msg.info.time.created) : new Date();
+      
+      messageEl.innerHTML = `
+        <div class="message-header">
+          <span class="message-role user">You</span>
+          <span class="message-time">${formatTime(time)}</span>
+        </div>
+        <div class="message-content">${escapeHtml(textPart.text)}</div>
+      `;
+      
+      conversation.appendChild(messageEl);
+    }
+    
+    function renderAssistantMessage(msg) {
+      const messageEl = document.createElement('div');
+      messageEl.className = 'message assistant';
+      messageEl.setAttribute('data-message-id', msg.info.id);
+      
+      const time = msg.info.time?.created ? new Date(msg.info.time.created) : new Date();
+      
+      // Extract text and tools from parts
+      let textContent = '';
+      const toolCalls = [];
+      
+      if (msg.parts && Array.isArray(msg.parts)) {
+        for (const part of msg.parts) {
+          if (part.type === 'text' && part.text) {
+            textContent += part.text;
+          } else if (part.type === 'tool') {
+            toolCalls.push(part);
+          }
+        }
+      }
+      
+      let contentHtml = '';
+      if (textContent.trim()) {
+        contentHtml += `<div class="text-content">${parseMarkdown(textContent.trim())}</div>`;
+      }
+      
+      for (const tool of toolCalls) {
+        contentHtml += renderToolCall(tool);
+      }
+      
+      messageEl.innerHTML = `
+        <div class="message-header">
+          <span class="message-role assistant">Assistant</span>
+          <span class="message-time">${formatTime(time)}</span>
+        </div>
+        <div class="message-content">${contentHtml || '<p>No response</p>'}</div>
+      `;
+      
+      conversation.appendChild(messageEl);
+    }
+    
+    function renderToolCall(tool) {
+      const toolName = tool.tool || tool.name || 'Tool';
+      const toolIcon = getToolIcon(toolName);
+      const state = tool.state || {};
+      const input = state.input || tool.input || {};
+      const output = state.output || tool.output || '';
+      const status = state.status || 'completed';
+      const title = state.title || input.description || '';
+      
+      let inputStr = '';
+      if (typeof input === 'string') {
+        inputStr = input;
+      } else if (input.command) {
+        inputStr = `$ ${input.command}`;
+      } else {
+        inputStr = JSON.stringify(input, null, 2);
+      }
+      
+      let outputSection = output ? `\n\n--- Output ---\n${output}` : '';
+      const statusClass = status === 'completed' ? 'completed' : (status === 'error' ? 'error' : 'running');
+      
+      return `
+        <div class="tool-call" onclick="this.classList.toggle('expanded')">
+          <div class="tool-header">
+            <span class="tool-name">${toolIcon} ${formatToolName(toolName)}${title ? ': ' + escapeHtml(title) : ''}</span>
+            <span class="tool-status ${statusClass}">${status === 'completed' ? 'Done' : status}</span>
+          </div>
+          <div class="tool-content">${escapeHtml(inputStr + outputSection)}</div>
+        </div>
+      `;
+    }
+
+    // ============================================================================
+    // Prompt Submission
+    // ============================================================================
+    async function submitPrompt() {
+      const input = promptInput.value.trim();
+      if (!input || isWaitingForResponse) return;
+
+      const isOpencodePrompt = !input.startsWith('!') && !input.startsWith('$');
+      
+      if (isOpencodePrompt) {
+        promptInput.value = '';
+        isWaitingForResponse = true;
+        updateInputState();
+        
+        // Don't add message to DOM - let the refresh handle it
+        // Just show thinking indicator
+        addThinkingIndicator();
+      }
+
+      const result = await window.vibeos.submitInput(input);
+      
+      if (result.success) {
+        if (result.type === 'opencode') {
+          // Response will come via SSE and trigger renderConversation
+          // Don't manually add anything here
+        } else if (result.type === 'app') {
+          showStatus(`Launched ${result.app}`, 'success');
+          promptInput.value = '';
+        } else if (result.type === 'shell') {
+          showStatus(`Running: ${result.command}`, 'success');
+          promptInput.value = '';
+        }
+      } else {
+        if (isOpencodePrompt) {
+          removeThinkingIndicator();
+          isWaitingForResponse = false;
+          updateInputState();
+        }
+        showStatus(result.error || 'Failed to send', 'error');
+      }
+    }
+
+    // ============================================================================
+    // SSE Event Handling
+    // ============================================================================
+    function handleOpencodeEvent(event) {
+      const eventType = event.type || event.event;
+
+      switch (eventType) {
+        case 'session.status':
+          const statusObj = event.properties?.status;
+          const statusType = statusObj?.type || statusObj;
+          
+          if (statusType === 'busy' && !isWaitingForResponse) {
+            isWaitingForResponse = true;
+            updateInputState();
+            if (!currentStreamingMessage) {
+              addThinkingIndicator();
+            }
+          } else if (statusType === 'idle') {
+            isWaitingForResponse = false;
+            updateInputState();
+          }
+          break;
+
+        case 'session.idle':
+          // Session finished - refresh from server state
+          isWaitingForResponse = false;
+          updateInputState();
+          currentStreamingMessage = null;
+          currentStreamingMessageId = null;
+          refreshFromServer();
+          break;
+
+        case 'message.created':
+          // Handle new messages (including external user messages)
+          const msgInfo = event.properties?.info;
+          if (msgInfo && msgInfo.role === 'user') {
+            // A user message was created (possibly from external API)
+            // Refresh to show it
+            refreshFromServer();
+          }
+          break;
+
+        case 'message.part.updated':
+          // Stream text updates in real-time
+          const part = event.properties?.part;
+          if (!part) break;
+          
+          // Skip non-content parts
+          if (part.type === 'step-start' || part.type === 'step-finish') break;
+          
+          if (part.type === 'text' && part.text) {
+            removeThinkingIndicator();
+            
+            // Create or update streaming message element
+            if (!currentStreamingMessage || currentStreamingMessageId !== part.messageID) {
+              // Check if element already exists in DOM
+              currentStreamingMessage = conversation.querySelector(`[data-message-id="${part.messageID}"]`);
+              
+              if (!currentStreamingMessage) {
+                currentStreamingMessage = document.createElement('div');
+                currentStreamingMessage.className = 'message assistant streaming';
+                currentStreamingMessage.setAttribute('data-message-id', part.messageID);
+                currentStreamingMessage.innerHTML = `
+                  <div class="message-header">
+                    <span class="message-role assistant">Assistant</span>
+                    <span class="message-time">${formatTime(new Date())}</span>
+                  </div>
+                  <div class="message-content"></div>
+                `;
+                // Insert at TOP (newest first)
+                conversation.insertBefore(currentStreamingMessage, conversation.firstChild);
+              }
+              currentStreamingMessageId = part.messageID;
+            }
+            
+            // Update text content
+            const content = currentStreamingMessage.querySelector('.message-content');
+            let textEl = content.querySelector('.text-content');
+            if (!textEl) {
+              textEl = document.createElement('div');
+              textEl.className = 'text-content';
+              content.appendChild(textEl);
+            }
+            textEl.innerHTML = parseMarkdown(part.text.trim());
+            scrollToTop();
+          } else if (part.type === 'tool') {
+            removeThinkingIndicator();
+            
+            if (!currentStreamingMessage) {
+              currentStreamingMessage = document.createElement('div');
+              currentStreamingMessage.className = 'message assistant streaming';
+              if (part.messageID) {
+                currentStreamingMessage.setAttribute('data-message-id', part.messageID);
+                currentStreamingMessageId = part.messageID;
+              }
+              currentStreamingMessage.innerHTML = `
+                <div class="message-header">
+                  <span class="message-role assistant">Assistant</span>
+                  <span class="message-time">${formatTime(new Date())}</span>
+                </div>
+                <div class="message-content"></div>
+              `;
+              // Insert at TOP (newest first)
+              conversation.insertBefore(currentStreamingMessage, conversation.firstChild);
+            }
+            
+            updateStreamingToolCall(part);
+            scrollToTop();
+          }
+          break;
+      }
+    }
+    
+    function updateStreamingToolCall(part) {
+      if (!currentStreamingMessage) return;
+      
+      const content = currentStreamingMessage.querySelector('.message-content');
+      const toolId = part.id || 'unknown';
+      let toolEl = content.querySelector(`[data-tool-id="${toolId}"]`);
+      
+      if (!toolEl) {
+        toolEl = document.createElement('div');
+        toolEl.className = 'tool-call';
+        toolEl.setAttribute('data-tool-id', toolId);
+        
+        const toolName = part.tool || 'Tool';
+        const toolIcon = getToolIcon(toolName);
+        const state = part.state || {};
+        const title = state.title || state.input?.description || '';
+        
+        toolEl.innerHTML = `
+          <div class="tool-header" onclick="this.parentElement.classList.toggle('expanded')">
+            <span class="tool-name">${toolIcon} ${formatToolName(toolName)}${title ? ': ' + escapeHtml(title) : ''}</span>
+            <span class="tool-status running">Running</span>
+          </div>
+          <div class="tool-content"></div>
+        `;
+        content.appendChild(toolEl);
+      }
+      
+      // Update status
+      const state = part.state || {};
+      const statusEl = toolEl.querySelector('.tool-status');
+      if (state.status === 'completed') {
+        statusEl.className = 'tool-status completed';
+        statusEl.textContent = 'Done';
+      } else if (state.status === 'error') {
+        statusEl.className = 'tool-status error';
+        statusEl.textContent = 'Error';
+      }
+    }
+    
+    async function refreshFromServer() {
+      try {
+        const result = await window.vibeos.getMessages();
+        if (result.success && result.messages) {
+          allMessages = result.messages;
+          renderConversation();
+        }
+      } catch (e) {
+        console.error('Failed to refresh messages:', e);
+      }
+    }
+
+    // ============================================================================
+    // UI Helpers
+    // ============================================================================
+    function addThinkingIndicator() {
+      if (conversation.querySelector('.thinking')) return;
+      
+      const thinking = document.createElement('div');
+      thinking.className = 'thinking';
+      thinking.innerHTML = `
+        <div class="thinking-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <span>Thinking...</span>
+      `;
+      // Insert at the TOP (newest first)
+      conversation.insertBefore(thinking, conversation.firstChild);
+      scrollToTop();
+    }
+
+    function removeThinkingIndicator() {
+      const thinking = conversation.querySelector('.thinking');
+      if (thinking) thinking.remove();
+    }
+
+    function updateInputState() {
+      promptInput.disabled = isWaitingForResponse;
+      
+      // Toggle between send and stop buttons
+      if (isWaitingForResponse) {
+        sendButton.classList.add('hidden');
+        stopButton.classList.add('visible');
+      } else {
+        sendButton.classList.remove('hidden');
+        stopButton.classList.remove('visible');
+        sendButton.disabled = false;
+        promptInput.focus();
+      }
+    }
+
+    function showStatus(message, type) {
+      statusBar.textContent = message;
+      statusBar.className = 'status-bar visible ' + type;
+      setTimeout(() => statusBar.classList.remove('visible'), 3000);
+    }
+
+    function scrollToBottom() {
+      conversation.scrollTop = conversation.scrollHeight;
+    }
+
+    function scrollToTop() {
+      conversation.scrollTop = 0;
+    }
+
+    function formatTime(date) {
+      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatToolName(name) {
+      return name.replace(/^mcp_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function getToolIcon(name) {
+      const icons = {
+        'bash': '<svg class="tool-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M4 20q-.825 0-1.413-.587Q2 18.825 2 18V6q0-.825.587-1.412Q3.175 4 4 4h16q.825 0 1.413.588Q22 5.175 22 6v12q0 .825-.587 1.413Q20.825 20 20 20Zm0-2h16V8H4v10Zm4-2h8v-2H8Zm-2.5-3 2.15-2.15-2.15-2.15 1.4-1.4L10.5 11l-3.55 3.55Z"/></svg>',
+        'read': '<svg class="tool-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>',
+        'write': '<svg class="tool-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>',
+        'edit': '<svg class="tool-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>',
+        'glob': '<svg class="tool-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>',
+        'grep': '<svg class="tool-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>',
+        'task': '<svg class="tool-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>'
+      };
+      const key = name.toLowerCase().replace(/^mcp_/, '');
+      return icons[key] || '<svg class="tool-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>';
+    }
+
+    // ============================================================================
+    // Event Listeners
+    // ============================================================================
+    promptInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        submitPrompt();
+      }
+      if (e.key === 'Escape' && isWaitingForResponse) {
+        handleStop();
+      }
+    });
+
+    sendButton.addEventListener('click', submitPrompt);
+    
+    stopButton.addEventListener('click', handleStop);
+    
+    function handleStop() {
+      if (!isWaitingForResponse) return;
+      
+      window.vibeos.abort();
+      isWaitingForResponse = false;
+      currentStreamingMessage = null;
+      currentStreamingMessageId = null;
+      removeThinkingIndicator();
+      updateInputState();
+      showStatus('Stopped', 'warning');
+    }
+    
+    // Handle session reset (from external command or keyboard shortcut)
+    function handleSessionReset() {
+      console.log('Session reset triggered');
+      
+      // Clear all state
+      allMessages = [];
+      displayedCount = MESSAGE_LIMIT;
+      isWaitingForResponse = false;
+      currentStreamingMessage = null;
+      currentStreamingMessageId = null;
+      
+      // Re-render to show empty state
+      renderConversation();
+      updateInputState();
+      showStatus('Session reset', 'success');
+    }
+    
+    // Manual reset via keyboard (Ctrl+Shift+R or Cmd+Shift+R)
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'R') {
+        e.preventDefault();
+        window.vibeos.resetSession().then(handleSessionReset);
+      }
+    });
+  </script>
+</body>
+</html>

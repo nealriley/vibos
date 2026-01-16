@@ -40,6 +40,7 @@ Technical reference documentation for lookup.
 - [**API Reference**](reference-api.md) - Complete OpenCode HTTP API docs
 - [**Automation Tools Reference**](reference-automation-tools.md) - Window and mouse control scripts
 - [**Components Reference**](COMPONENTS.md) - Internal component documentation
+- [**Shell UI Redesign**](reference-shell-ui-redesign.md) - React + Motion migration reference
 
 ### Explanation (Understanding-Oriented)
 

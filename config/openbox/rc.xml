@@ -92,6 +92,13 @@
     <keybind key="Super-m">
       <action name="ToggleMaximize"/>
     </keybind>
+
+    <!-- Super+Shift+R: Reset desktop session -->
+    <keybind key="Super-Shift-r">
+      <action name="Execute">
+        <command>sh -c 'echo reset > /tmp/vibeos-command'</command>
+      </action>
+    </keybind>
   </keyboard>
 
   <mouse>

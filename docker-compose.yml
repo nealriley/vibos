@@ -1,10 +1,10 @@
 # VibeOS Docker Compose Configuration
 #
 # Usage:
-#   docker-compose up -d          # Start in background
-#   docker-compose up --build     # Rebuild and start
-#   docker-compose logs -f        # View logs
-#   docker-compose down           # Stop and remove
+#   docker compose up -d          # Start in background
+#   docker compose up --build     # Rebuild and start
+#   docker compose logs -f        # View logs
+#   docker compose down           # Stop and remove
 #
 # Access: http://localhost:6080/vnc.html
 
