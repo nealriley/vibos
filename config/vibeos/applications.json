@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "description": "VibeOS application registry - maps friendly names to commands",
+    "version": "1.0.0"
+  },
+  "applications": {
+    "browsers": {
+      "chrome": {
+        "command": "google-chrome",
+        "aliases": ["google-chrome", "browser", "web"],
+        "description": "Google Chrome web browser"
+      }
+    },
+    "terminals": {
+      "terminal": {
+        "command": "xfce4-terminal",
+        "aliases": ["term", "console", "shell", "xfce4-terminal"],
+        "description": "XFCE4 Terminal emulator"
+      },
+      "xterm": {
+        "command": "xterm",
+        "aliases": [],
+        "description": "Basic X terminal"
+      }
+    },
+    "file-managers": {
+      "files": {
+        "command": "pcmanfm",
+        "aliases": ["file-manager", "pcmanfm", "explorer"],
+        "description": "PCManFM file manager"
+      }
+    },
+    "editors": {
+      "mousepad": {
+        "command": "mousepad",
+        "aliases": ["notepad", "text-editor"],
+        "description": "Mousepad text editor (GUI)"
+      },
+      "nano": {
+        "command": "nano",
+        "aliases": [],
+        "description": "Nano terminal text editor"
+      },
+      "vim": {
+        "command": "vim",
+        "aliases": ["vi"],
+        "description": "Vim terminal text editor"
+      }
+    },
+    "media": {
+      "image-viewer": {
+        "command": "feh",
+        "aliases": ["feh", "photos", "pictures"],
+        "description": "Feh image viewer"
+      },
+      "pdf-viewer": {
+        "command": "evince",
+        "aliases": ["evince", "pdf", "document-viewer"],
+        "description": "Evince document/PDF viewer"
+      },
+      "ffmpeg": {
+        "command": "ffmpeg",
+        "aliases": ["video", "audio", "convert"],
+        "description": "FFmpeg media converter"
+      }
+    },
+    "system": {
+      "htop": {
+        "command": "htop",
+        "aliases": ["top", "processes", "task-manager"],
+        "description": "Interactive process viewer"
+      }
+    },
+    "development": {
+      "git": {
+        "command": "git",
+        "aliases": [],
+        "description": "Git version control"
+      },
+      "node": {
+        "command": "node",
+        "aliases": ["nodejs"],
+        "description": "Node.js JavaScript runtime"
+      },
+      "npm": {
+        "command": "npm",
+        "aliases": [],
+        "description": "Node package manager"
+      },
+      "python": {
+        "command": "python3",
+        "aliases": ["python3", "py"],
+        "description": "Python 3 interpreter"
+      }
+    },
+    "ai": {
+      "opencode": {
+        "command": "opencode",
+        "aliases": ["ai", "claude", "assistant"],
+        "description": "OpenCode AI coding assistant"
+      }
+    }
+  },
+  "defaults": {
+    "browser": "chrome",
+    "terminal": "terminal",
+    "editor": "mousepad",
+    "file-manager": "files"
+  }
+}
