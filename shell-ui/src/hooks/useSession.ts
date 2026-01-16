@@ -16,9 +16,6 @@ interface UseSessionReturn {
   abort: () => Promise<void>
   reset: () => Promise<void>
   
-  // For streaming updates
-  updateStreamingPart: (part: MessagePart & { messageID?: string }) => void
-  
   // Check if a message came from external API
   isExternalMessage: (messageId: string) => boolean
 }
@@ -130,6 +127,19 @@ export function useSession(): UseSessionReturn {
 
           break
         }
+        
+        case 'message.part.updated': {
+          const partEvent = event as { properties: { part: (MessagePart | { type: string }) & { messageID?: string } } }
+          const part = partEvent.properties?.part
+          
+          if (!part) break
+          
+          // Skip non-content parts (step-start, step-finish, etc.)
+          if (part.type !== 'text' && part.type !== 'tool') break
+          
+          handleStreamingPart(part as MessagePart & { messageID?: string })
+          break
+        }
       }
     }
     
@@ -158,6 +168,74 @@ export function useSession(): UseSessionReturn {
     } catch (e) {
       console.error('Failed to refresh messages:', e)
     }
+  }, [])
+  
+  // Handle streaming message part updates
+  const handleStreamingPart = useCallback((part: MessagePart & { messageID?: string }) => {
+    if (!part.messageID) return
+    
+    setStreamingMessageId(part.messageID)
+    
+    setMessages(prev => {
+      // Find or create the streaming message
+      const existingIdx = prev.findIndex(m => m.info.id === part.messageID)
+      
+      if (existingIdx >= 0) {
+        // Update existing message
+        const updated = [...prev]
+        const msg = { ...updated[existingIdx] }
+        
+        if (part.type === 'text') {
+          // Replace or add text part
+          const textIdx = msg.parts.findIndex(p => p.type === 'text')
+          if (textIdx >= 0) {
+            msg.parts = [...msg.parts]
+            msg.parts[textIdx] = part
+          } else {
+            msg.parts = [...msg.parts, part]
+          }
+        } else if (part.type === 'tool') {
+          // Find or add tool part by ID
+          const toolPart = part as { id?: string }
+          const toolIdx = msg.parts.findIndex(p => p.type === 'tool' && (p as { id?: string }).id === toolPart.id)
+          if (toolIdx >= 0) {
+            msg.parts = [...msg.parts]
+            msg.parts[toolIdx] = part
+          } else {
+            msg.parts = [...msg.parts, part]
+          }
+        }
+        
+        updated[existingIdx] = msg
+        return updated
+      } else {
+        const isLikelyUserEcho =
+          part.type === 'text' &&
+          pendingLocalUserText.current &&
+          part.text.trim() === pendingLocalUserText.current
+
+        const role: Message['info']['role'] = isLikelyUserEcho ? 'user' : 'assistant'
+
+        let next = prev
+        if (role === 'user' && pendingLocalUserMessageId.current) {
+          const localId = pendingLocalUserMessageId.current
+          next = prev.filter((m) => m.info.id !== localId)
+          pendingLocalUserMessageId.current = null
+          pendingLocalUserText.current = null
+        }
+
+        // Create new message
+        const newMsg: Message = {
+          info: {
+            id: part.messageID!,
+            role,
+            time: { created: new Date().toISOString() }
+          },
+          parts: [part]
+        }
+        return [...next, newMsg]
+      }
+    })
   }, [])
   
   const sendMessage = useCallback(async (input: string) => {
@@ -250,72 +328,7 @@ export function useSession(): UseSessionReturn {
     }
   }, [])
   
-  const updateStreamingPart = useCallback((part: MessagePart & { messageID?: string }) => {
-    if (!part.messageID) return
-    
-    setStreamingMessageId(part.messageID)
-    
-    setMessages(prev => {
-      // Find or create the streaming message
-      const existingIdx = prev.findIndex(m => m.info.id === part.messageID)
-      
-      if (existingIdx >= 0) {
-        // Update existing message
-        const updated = [...prev]
-        const msg = { ...updated[existingIdx] }
-        
-        if (part.type === 'text') {
-          // Replace or add text part
-          const textIdx = msg.parts.findIndex(p => p.type === 'text')
-          if (textIdx >= 0) {
-            msg.parts = [...msg.parts]
-            msg.parts[textIdx] = part
-          } else {
-            msg.parts = [...msg.parts, part]
-          }
-        } else if (part.type === 'tool') {
-          // Find or add tool part by ID
-          const toolPart = part as { id?: string }
-          const toolIdx = msg.parts.findIndex(p => p.type === 'tool' && (p as { id?: string }).id === toolPart.id)
-          if (toolIdx >= 0) {
-            msg.parts = [...msg.parts]
-            msg.parts[toolIdx] = part
-          } else {
-            msg.parts = [...msg.parts, part]
-          }
-        }
-        
-        updated[existingIdx] = msg
-        return updated
-      } else {
-        const isLikelyUserEcho =
-          part.type === 'text' &&
-          pendingLocalUserText.current &&
-          part.text.trim() === pendingLocalUserText.current
 
-        const role: Message['info']['role'] = isLikelyUserEcho ? 'user' : 'assistant'
-
-        let next = prev
-        if (role === 'user' && pendingLocalUserMessageId.current) {
-          const localId = pendingLocalUserMessageId.current
-          next = prev.filter((m) => m.info.id !== localId)
-          pendingLocalUserMessageId.current = null
-          pendingLocalUserText.current = null
-        }
-
-        // Create new message
-        const newMsg: Message = {
-          info: {
-            id: part.messageID!,
-            role,
-            time: { created: new Date().toISOString() }
-          },
-          parts: [part]
-        }
-        return [...next, newMsg]
-      }
-    })
-  }, [])
   
   // Check if a message was from external API
   const isExternalMessage = useCallback((messageId: string): boolean => {
@@ -331,7 +344,6 @@ export function useSession(): UseSessionReturn {
     sendMessage,
     abort: abortSession,
     reset: resetSession,
-    updateStreamingPart,
     isExternalMessage
   }
 }

@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Toaster, toast } from 'sonner'
 import { useSession } from '@/hooks/useSession'
-import { useSSE } from '@/hooks/useSSE'
 import * as api from '@/lib/api'
 import { Send, Square, Sparkles, Loader2 } from 'lucide-react'
 import { Message } from '@/components/Message'
@@ -18,15 +17,12 @@ export function App() {
     sendMessage,
     abort,
     reset,
-    updateStreamingPart,
     isExternalMessage,
   } = useSession()
 
   const [input, setInput] = useState('')
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const feedRef = useRef<HTMLDivElement>(null)
-
-  useSSE({ onPartUpdated: updateStreamingPart })
 
   // Auto-focus input
   useEffect(() => {
