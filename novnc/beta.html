@@ -295,6 +295,7 @@
         // State Management
         // ====================================================================
         let rfb = null;  // RFB connection instance
+        let vncClipboard = '';  // Clipboard data received from VNC server
         let reconnectTimer = null;
         let reconnectAttempts = 0;
         const RECONNECT_DELAY = 3000;
@@ -413,6 +414,10 @@
                 rfb.addEventListener('disconnect', onDisconnect);
                 rfb.addEventListener('credentialsrequired', onCredentialsRequired);
                 rfb.addEventListener('securityfailure', onSecurityFailure);
+                rfb.addEventListener('clipboard', (e) => {
+                    vncClipboard = e.detail.text || '';
+                    console.log('VNC clipboard updated:', vncClipboard.substring(0, 50) + (vncClipboard.length > 50 ? '...' : ''));
+                });
 
             } catch (err) {
                 console.error('Connection error:', err);
@@ -520,12 +525,9 @@
         function copyClipboard() {
             if (!rfb) return;
             
-            // Try to get clipboard from RFB (if supported)
-            // Note: VNC clipboard sync is limited - this copies whatever noVNC has cached
-            const clipboardData = rfb._clipboardText || '';
-            
-            if (clipboardData) {
-                navigator.clipboard.writeText(clipboardData).then(() => {
+            // Use clipboard data received via VNC clipboard event
+            if (vncClipboard) {
+                navigator.clipboard.writeText(vncClipboard).then(() => {
                     const btn = document.getElementById('clipboard_btn');
                     const originalText = btn.textContent;
                     btn.textContent = 'Copied!';
@@ -535,7 +537,7 @@
                     alert('Clipboard copy failed. Browser may not support clipboard API.');
                 });
             } else {
-                alert('No clipboard data available from VNC session.\\n\\nTip: Select and copy text (Ctrl+C) in the VNC session first.');
+                alert('No clipboard data available from VNC session.\n\nTip: Select and copy text (Ctrl+C) in the VNC session first.');
             }
         }
         
