@@ -50,6 +50,8 @@ export interface Config {
   showDevTools: boolean
 }
 
+export type ConnectionStatus = 'connected' | 'disconnected' | 'reconnecting'
+
 export interface RunningWindow {
   id: string
   pid: number
@@ -72,6 +74,11 @@ export interface VibeOSAPI {
   onOpencodeEvent: (callback: (event: OpenCodeEvent) => void) => void
   removeOpencodeEventListener: () => void
   onSessionReset: (callback: () => void) => void
+  
+  // Connection Status API
+  getConnectionStatus: () => Promise<ConnectionStatus>
+  onConnectionStatus: (callback: (status: ConnectionStatus) => void) => void
+  removeConnectionStatusListener: () => void
 
   // Icon/Taskbar API
   toggleMainWindow: () => void

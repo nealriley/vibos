@@ -1,6 +1,7 @@
 # VibeOS Project Status
 
-Last Updated: January 16, 2026
+**Last Updated**: January 16, 2026  
+**Branch**: `cleanup` (23 commits ahead of main)
 
 ## Overview
 
@@ -31,6 +32,8 @@ VibeOS is a containerized AI-powered desktop environment accessible via VNC/noVN
 └─────────────────────────────────────────────────────────┘
 ```
 
+---
+
 ## Completed Features
 
 ### Core Infrastructure
@@ -44,91 +47,95 @@ VibeOS is a containerized AI-powered desktop environment accessible via VNC/noVN
 - [x] Supervisor process management
 - [x] Quick start script (start.sh)
 - [x] docker-compose.yml for easy deployment
-- [x] Comprehensive Makefile with 25+ targets
+- [x] Comprehensive Makefile
 
 ### Shell UI (Electron + React)
 
-**Completed January 2026 - React Migration**
+**Architecture (Cleanup Branch)**
+- [x] Modular main process (~140 lines, down from 900)
+- [x] 7 focused modules in `shell-ui/src/main/`
+- [x] ErrorBoundary for graceful error handling
+- [x] ConnectionStatus indicator component
+- [x] Consolidated SSE handling in useSession hook
 
+**UI Features**
 - [x] React 18 + TypeScript + Vite build system
 - [x] Two-window architecture (icon + main)
 - [x] Main conversation window (fullscreen, frameless)
-- [x] Dock-style icon window (always on top, non-focusable)
+- [x] Dock-style icon window (always on top)
 - [x] Dynamic taskbar showing running windows
 - [x] Stop button to abort AI generation
 - [x] SSE event streaming for real-time responses
 - [x] Message history with server-authoritative state
 - [x] Dark theme (Zinc-based Tailwind palette)
-- [x] Keyboard shortcuts (Super+Space, Escape, Ctrl+Shift+R)
-- [x] App launcher (`!chrome`, `!terminal`, etc.)
+- [x] Keyboard shortcuts (Super+Space, Escape)
+- [x] App launcher (`!chrome`, `!terminal`)
 - [x] Shell command execution (`$ls -la`)
 - [x] Markdown rendering in responses
 - [x] Tool call visualization (collapsible)
 - [x] Motion animations for message transitions
-- [x] External API message detection and styling
-- [x] Optimistic rendering for user messages
+
+### noVNC Web Interface
+
+**Toolbar Buttons** (beta.html)
+- [x] Screenshot - Capture canvas as PNG
+- [x] Record - Toggle screen recording (WebM)
+- [x] Alt+Tab - Send Alt+Tab key combo
+- [x] Super - Send Super/Windows key
+- [x] Run Cmd - Execute commands via OpenCode API
+- [x] Fullscreen - Toggle fullscreen (F11)
+- [x] Ctrl+Alt+Del - Send key combo
+
+**UI Features**
+- [x] Auto-connect on load
+- [x] Dark theme matching shell-ui
+- [x] Connection status indicator
+- [x] Auto-reconnect with exponential backoff
+- [x] Command execution modal with copyable output
 
 ### Window Automation Tools
 
 Located in `/home/vibe/scripts/`:
 
-| Script | Description | Status |
-|--------|-------------|--------|
-| `window.sh` | Unified interface for all operations | Done |
-| `windows-list.sh` | List all open windows (JSON) | Done |
-| `window-focus.sh` | Focus window by ID/class/title | Done |
-| `window-move.sh` | Move window to position | Done |
-| `window-resize.sh` | Resize window | Done |
-| `window-close.sh` | Close window gracefully | Done |
-| `window-maximize.sh` | Maximize/restore window | Done |
-| `window-minimize.sh` | Minimize window | Done |
-| `window-screenshot.sh` | Screenshot specific window | Done |
-| `window-type.sh` | Type text into window | Done |
-| `window-key.sh` | Send keystrokes to window | Done |
-| `mouse-move.sh` | Move cursor to coordinates | Done |
-| `mouse-click.sh` | Click at position | Done |
-| `mouse-location.sh` | Get cursor position | Done |
-| `screen-info.sh` | Get screen dimensions | Done |
-| `screenshot.sh` | Full desktop screenshot | Done |
-| `apps-list.sh` | List running GUI applications | Done |
+| Script | Description |
+|--------|-------------|
+| `window.sh` | Unified interface for all operations |
+| `window-list.sh` | List all open windows (JSON) |
+| `window-focus.sh` | Focus window by ID/class/title |
+| `window-move.sh` | Move window to position |
+| `window-resize.sh` | Resize window |
+| `window-close.sh` | Close window gracefully |
+| `window-maximize.sh` | Maximize/restore window |
+| `window-minimize.sh` | Minimize window |
+| `screenshot.sh` | Full desktop screenshot |
+| `clipboard-read.sh` | Read X11 clipboard |
+| `clipboard-write.sh` | Write to clipboard |
 
-### Custom noVNC Interface
+**Shared Library**: `lib/window-utils.sh` - Common functions used by all scripts
 
-- [x] `beta.html` - VibeOS-branded VNC web client
-  - Auto-connect on load
-  - Dark theme matching shell-ui
-  - Connection status indicator (green/yellow/red dot)
-  - Auto-reconnect (3s interval, max 50 attempts)
-  - Fullscreen mode (F11)
-  - Ctrl+Alt+Del button
-  - Reset session button
+### Installed Applications
+
+| Category | Applications |
+|----------|--------------|
+| Browser | Google Chrome |
+| Terminals | xfce4-terminal, xterm |
+| File Manager | PCManFM |
+| Text Editors | Mousepad, nano, vim |
+| Media | ffmpeg, feh (images), evince (PDF) |
+| System | htop, tree, ripgrep |
+| Accessories | xarchiver, xpad (sticky notes) |
+| Development | Node.js 22, Python 3, git |
 
 ### Test Infrastructure
 
-- [x] Test framework with helper functions
+- [x] Vitest + React Testing Library (43 unit tests)
 - [x] Remote API tests (`tests/remote/`)
 - [x] In-container automation tests (`tests/automation/`)
 - [x] Makefile integration (`make test`)
 
-### Documentation
-
-- [x] README.md - Project overview and quick start
-- [x] AGENTS.md - AI agent instructions
-- [x] ARCHITECTURE.md - Technical system architecture
-- [x] docs/README.md - Documentation index (Diataxis)
-- [x] docs/tutorial-getting-started.md
-- [x] docs/reference-api.md - OpenCode API reference
-- [x] docs/guide-vnc-interfaces.md
-- [x] docs/guide-integration.md
-- [x] docs/reference-automation-tools.md
-- [x] docs/explanation-architecture.md
-- [x] docs/DEVELOPMENT.md
-- [x] docs/COMPONENTS.md (Updated for React)
-- [x] Library reference docs (lib-*.md)
-
 ---
 
-## Current Technology Stack
+## Technology Stack
 
 ### Container Services
 
@@ -151,59 +158,21 @@ Located in `/home/vibe/scripts/`:
 | Vite | 6.x | Build tool |
 | Tailwind CSS | 4.x | Styling |
 | Motion | 12.x | Animations |
-| Radix UI | Various | Accessible primitives |
+| Vitest | Latest | Testing |
 
 ---
 
-## Known Issues / Technical Debt
+## Known Issues
 
-### High Priority
+### Deferred
 
-1. **Duplicate SSE Event Handling**: `useSession` and `useSSE` hooks both subscribe to events
-2. **Large Main Process**: `main.js` is ~900 lines, needs modularization
-3. **No Error Boundary**: React app lacks error boundary for graceful failure
+1. **VNC Clipboard**: noVNC clipboard event not firing reliably with x11vnc
 
-### Medium Priority
+### Technical Debt
 
-1. **Unused Code**: `useAutoFade` hook not integrated, `parseCommand` duplicates main.js logic
-2. **Message Pagination**: `MESSAGE_LIMIT` defined but not used
-3. **Window Script Duplication**: Each script has duplicated window-finding logic
-4. **Hardcoded Paths**: Many paths hardcoded throughout codebase
-
-### Low Priority
-
-1. **TypeScript in Main Process**: `main.js` and `preload.js` still vanilla JS
-2. **Unused Configs**: labwc, foot, alacritty configs exist but unused
-3. **Log Rotation**: Not configured for supervisor logs
-
----
-
-## Pending / Future Work
-
-### Short-term
-
-- [ ] Add React error boundary
-- [ ] Implement message pagination
-- [ ] Extract shared window-finding library for scripts
-- [ ] Add connection status indicator to UI
-- [ ] Clean up unused hooks/code
-
-### Medium-term
-
-- [ ] Modularize main.js into separate modules
-- [ ] Convert main.js to TypeScript
-- [ ] Add API authentication option
-- [ ] Session persistence across restarts
-- [ ] Multi-session support
-- [ ] Desktop icons when main window hidden
-
-### Long-term (Vision)
-
-- [ ] Bare-metal Linux distribution
-- [ ] Raspberry Pi support (ARM64)
-- [ ] Live USB support
-- [ ] Wayland compositor (labwc/cage)
-- [ ] Custom VibeOS Linux distro
+1. **Event Bus**: Could benefit from centralized event system
+2. **OpenCode Client Library**: API calls scattered, could be unified
+3. **TypeScript in Main Process**: `main.js` and `preload.js` still vanilla JS
 
 ---
 
@@ -224,14 +193,10 @@ Located in `/home/vibe/scripts/`:
 # Start VibeOS
 ./start.sh
 
-# Force rebuild
-./start.sh --build
-
 # Using Makefile
 make dev            # docker compose up
 make logs           # View logs
 make shell          # Shell into container
-make status         # Service status
 make test           # Run all tests
 
 # Send message from host
@@ -243,9 +208,10 @@ make test           # Run all tests
 
 ---
 
-## Change Log
+## Related Documentation
 
-- **2026-01-16**: Completed comprehensive architecture audit
-- **2026-01-14**: Shell UI React migration complete
-- **2026-01-13**: Added test infrastructure, stop button, reset session
-- **2026-01-13**: Initial AGENTS.md and documentation structure
+- [CHANGELOG.md](CHANGELOG.md) - Completed work history
+- [ROADMAP.md](ROADMAP.md) - Future development phases
+- [COMPONENTS.md](COMPONENTS.md) - React component documentation
+- [DEVELOPMENT.md](DEVELOPMENT.md) - Development guide
+- [../AGENTS.md](../AGENTS.md) - AI agent instructions

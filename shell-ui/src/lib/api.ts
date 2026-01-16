@@ -9,7 +9,8 @@ import type {
   GetMessagesResult,
   ResetSessionResult,
   AbortResult,
-  Config 
+  Config,
+  ConnectionStatus
 } from '@/types/vibeos'
 import type { OpenCodeEvent } from '@/types/message'
 
@@ -74,4 +75,25 @@ export function removeOpencodeEventListener(): void {
  */
 export function onSessionReset(callback: () => void): void {
   window.vibeos.onSessionReset(callback)
+}
+
+/**
+ * Get current SSE connection status
+ */
+export async function getConnectionStatus(): Promise<ConnectionStatus> {
+  return window.vibeos.getConnectionStatus()
+}
+
+/**
+ * Subscribe to connection status changes
+ */
+export function onConnectionStatus(callback: (status: ConnectionStatus) => void): void {
+  window.vibeos.onConnectionStatus(callback)
+}
+
+/**
+ * Unsubscribe from connection status changes
+ */
+export function removeConnectionStatusListener(): void {
+  window.vibeos.removeConnectionStatusListener()
 }

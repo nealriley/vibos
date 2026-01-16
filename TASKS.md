@@ -1,40 +1,46 @@
 # VibeOS Active Tasks
 
 > **Last Updated**: January 16, 2026  
-> **Current Phase**: Post-React Migration, Pre-Phase 1
+> **Current Phase**: Phase 2 - Architecture Improvements
 
 ## Overview
 
 This file tracks active development tasks for VibeOS. For the full development plan, see [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ---
-<cleanuptasks>
 
-## Next Up: Phase 1 - Code Organization
-
-See [docs/ROADMAP.md](docs/ROADMAP.md) for full details.
+## Completed: Phase 1 - Code Organization
 
 ### 1.1 Main Process Modularization
-- [ ] Extract OpenCode API client to `api-client.js`
-- [ ] Extract SSE handling to `sse-handler.js`
-- [ ] Extract window management to `window-manager.js`
-- [ ] Extract IPC handlers to `ipc-handlers.js`
-- [ ] Extract polling logic to `polling.js`
-- [ ] Create centralized config module
-- [ ] Update main.js to orchestrate modules
+- [x] Extract OpenCode API client to `api-client.js`
+- [x] Extract SSE handling to `sse-handler.js`
+- [x] Extract window management to `window-manager.js`
+- [x] Extract IPC handlers to `ipc-handlers.js`
+- [x] Extract polling logic to `polling.js`
+- [x] Create centralized config module
+- [x] Update main.js to orchestrate modules (~140 lines)
 
 ### 1.2 Code Cleanup
-- [ ] Audit and remove/integrate `useAutoFade` hook
-- [ ] Remove `lib/parseCommand.ts` (duplicates main.js)
+- [x] Remove `useAutoFade` hook (unused)
+- [x] Remove `lib/parseCommand.ts` (duplicated main.js)
 - [ ] Remove unused CSS classes
-- [ ] Document or remove unused configs (labwc, foot, alacritty)
+- [x] Remove unused configs (labwc, foot, alacritty)
 
 ### 1.3 Shared Automation Library
-- [ ] Create `scripts/tools/lib/window-utils.sh`
-- [ ] Update window scripts to use shared library
-- [ ] Add common error handling utilities
+- [x] Create `scripts/tools/lib/window-utils.sh`
+- [x] Update window scripts to use shared library
+- [x] Add common error handling utilities
 
-<cleanuptasks>
+---
+
+## Current: Phase 2 - Architecture Improvements
+
+- [ ] Add React Error Boundary component
+- [ ] Add Connection Status indicator
+- [ ] Consolidate SSE handling (useSession/useSSE overlap)
+- [ ] Create unified event bus (optional)
+
+---
 
 The tasks are layed out with separate epic-level concepts to be delivered, with context and specific tasks entailed. 
 
@@ -106,12 +112,13 @@ Once we have the ability to have multiple running applications, one electron app
 
 ### Known Issues
 1. `useSession` and `useSSE` both subscribe to SSE events (duplicate handling)
-2. `main.js` at 900 lines needs modularization
-3. No error boundary - unhandled errors crash UI
-4. `useAutoFade` hook exists but isn't used
+2. ~~`main.js` at 900 lines needs modularization~~ (FIXED - now ~140 lines)
+3. ~~No error boundary - unhandled errors crash UI~~ (IN PROGRESS)
+4. ~~`useAutoFade` hook exists but isn't used~~ (REMOVED)
 
 ### Architecture Notes
 - Two-window system allows dock icon without stealing focus
 - Icon window dynamically resizes for taskbar
 - Command signal file (`/tmp/vibeos-command`) enables external control
 - Window polling (1s) for taskbar, command polling (500ms) for signals
+- Main process split into 7 modules in `shell-ui/src/main/`

@@ -12,31 +12,17 @@
 
 set -euo pipefail
 
-export DISPLAY="${DISPLAY:-:0}"
+# Source shared library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/window-utils.sh"
 
-if [[ $# -lt 1 ]]; then
-    echo "Usage: window-focus.sh <window-id|class|title>" >&2
-    exit 1
-fi
+# Validate arguments
+require_args 1 $# "window-focus.sh <window-id|class|title>"
 
 IDENTIFIER="$1"
 
-# Check if it's a hex window ID
-if [[ "$IDENTIFIER" =~ ^0x[0-9a-fA-F]+$ ]]; then
-    xdotool windowactivate "$IDENTIFIER" 2>/dev/null && echo "Focused window: $IDENTIFIER" && exit 0
-fi
+# Find and focus the window
+WINDOW_ID=$(require_window "$IDENTIFIER")
+focus_window "$WINDOW_ID"
 
-# Try to find by class name
-WINDOW_ID=$(xdotool search --class "$IDENTIFIER" 2>/dev/null | head -1 || echo "")
-if [[ -n "$WINDOW_ID" ]]; then
-    xdotool windowactivate "$WINDOW_ID" 2>/dev/null && echo "Focused window by class '$IDENTIFIER': $WINDOW_ID" && exit 0
-fi
-
-# Try to find by title
-WINDOW_ID=$(xdotool search --name "$IDENTIFIER" 2>/dev/null | head -1 || echo "")
-if [[ -n "$WINDOW_ID" ]]; then
-    xdotool windowactivate "$WINDOW_ID" 2>/dev/null && echo "Focused window by title '$IDENTIFIER': $WINDOW_ID" && exit 0
-fi
-
-echo "Error: No window found matching '$IDENTIFIER'" >&2
-exit 1
+log_info "Focused window: $WINDOW_ID"

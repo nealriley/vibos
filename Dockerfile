@@ -72,6 +72,23 @@ RUN apt-get update && \
         # Window automation tools
         xdotool \
         wmctrl \
+        # Clipboard tools
+        xclip \
+        xsel \
+        # Media tools
+        ffmpeg \
+        feh \
+        evince \
+        # System utilities
+        htop \
+        tree \
+        ripgrep \
+        # Archive manager
+        xarchiver \
+        unzip \
+        p7zip-full \
+        # Desktop accessories
+        xpad \
         # File manager
         pcmanfm \
         # Text editor
@@ -131,6 +148,7 @@ WORKDIR /home/vibe
 RUN mkdir -p \
     /home/vibe/.config/openbox \
     /home/vibe/.config/xfce4/terminal \
+    /home/vibe/.config/vibeos \
     /home/vibe/.opencode \
     /home/vibe/projects \
     /home/vibe/shared \
@@ -150,6 +168,8 @@ RUN npm install && npm run build:renderer
 # Copy configuration files
 COPY --chown=vibe:vibe config/openbox /home/vibe/.config/openbox
 COPY --chown=vibe:vibe config/xfce4-terminal /home/vibe/.config/xfce4/terminal
+COPY --chown=vibe:vibe config/vibeos /home/vibe/.config/vibeos
+COPY --chown=vibe:vibe config/vibeos/AGENTS.md /home/vibe/AGENTS.md
 COPY --chown=vibe:vibe config/opencode/opencode.json /home/vibe/.opencode/opencode.json
 COPY config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY scripts/entrypoint.sh /entrypoint.sh

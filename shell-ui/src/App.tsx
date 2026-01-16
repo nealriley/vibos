@@ -2,10 +2,10 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Toaster, toast } from 'sonner'
 import { useSession } from '@/hooks/useSession'
-import { useSSE } from '@/hooks/useSSE'
 import * as api from '@/lib/api'
 import { Send, Square, Sparkles, Loader2 } from 'lucide-react'
 import { Message } from '@/components/Message'
+import { ConnectionStatus } from '@/components/ConnectionStatus'
 import { cn } from '@/lib/cn'
 
 export function App() {
@@ -17,15 +17,12 @@ export function App() {
     sendMessage,
     abort,
     reset,
-    updateStreamingPart,
     isExternalMessage,
   } = useSession()
 
   const [input, setInput] = useState('')
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const feedRef = useRef<HTMLDivElement>(null)
-
-  useSSE({ onPartUpdated: updateStreamingPart })
 
   // Auto-focus input
   useEffect(() => {
@@ -261,6 +258,9 @@ export function App() {
 
             {/* Hints */}
             <div className="flex items-center justify-center gap-4 text-[11px] text-zinc-500 mt-3">
+              <div className="group">
+                <ConnectionStatus />
+              </div>
               <span><Kbd>Enter</Kbd> send</span>
               <span><Kbd>Shift+Enter</Kbd> new line</span>
               <span><Kbd>!</Kbd> launch app</span>
