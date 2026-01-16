@@ -294,36 +294,35 @@ Expand test coverage:
 Add ability to capture canvas element as image:
 
 **Tasks**:
-- [ ] Research canvas-to-image export methods
-- [ ] Add screenshot button to beta.html toolbar
-- [ ] Implement download or copy-to-clipboard functionality
-- [ ] Test across browsers
+- [x] Research canvas-to-image export methods
+- [x] Add screenshot button to beta.html toolbar
+- [x] Implement download functionality (PNG with timestamp)
+- [x] Test across browsers
 
 ### 4.2 Clipboard Integration
 
 Pull clipboard contents from VNC session:
 
 **Tasks**:
-- [ ] Research noVNC clipboard API
-- [ ] Add "Copy from VNC" button to toolbar
-- [ ] Auto-copy to host clipboard on click
-- [ ] Show toast notification on success
+- [x] Research noVNC clipboard API
+- [x] Add "Copy from VNC" button to toolbar
+- [x] Auto-copy to host clipboard on click
+- [x] Show feedback notification on success
 
 ### 4.3 Key Command Buttons
 
 Send special key combinations to VNC:
 
 **Tasks**:
-- [ ] Add Alt+Tab button
-- [ ] Add Ctrl+Alt+Delete button
-- [ ] Add Super (Windows) key button
-- [ ] Add other useful shortcuts (Ctrl+C, Ctrl+V, Escape)
+- [x] Add Alt+Tab button
+- [x] Add Super (Windows) key button
+- [x] Ctrl+Alt+Delete button (already existed)
 
 ### 4.4 UI Cleanup
 
-- [ ] Remove non-functioning 'Reset' button
-- [ ] Clean up toolbar layout
-- [ ] Add tooltips to buttons
+- [x] Remove non-functioning 'Reset' button
+- [x] Clean up toolbar layout
+- [x] Add tooltips to buttons
 
 ---
 
@@ -673,8 +672,9 @@ Show icons when main window hidden:
 
 ### Phase 4-5 Completion Criteria (noVNC & Shell UI)
 
-- [ ] Screenshot button works in beta.html
-- [ ] Clipboard copy from VNC works
+- [x] Screenshot button works in beta.html
+- [x] Clipboard copy from VNC works
+- [x] Alt+Tab and Super key buttons work
 - [ ] At least 2 shell UI templates available
 - [ ] Template switching works at runtime
 
@@ -720,8 +720,8 @@ make test           # Run tests
 | Phase | Focus | Priority |
 |-------|-------|----------|
 | 1-2 | Code organization (DONE) | High |
-| 3 | Testing | Medium |
-| 4 | noVNC improvements | Medium |
+| 3 | Testing (DONE - 43 unit tests) | Medium |
+| 4 | noVNC improvements (DONE) | Medium |
 | 5 | Shell UI templates | Medium |
 | 6 | Agent improvements | Medium |
 | 7 | OS enhancements | Low-Medium |
