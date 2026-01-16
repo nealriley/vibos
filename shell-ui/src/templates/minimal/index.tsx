@@ -164,7 +164,7 @@ function MinimalMessage({
   
   // Extract text content
   let text = ''
-  for (const part of message.content) {
+  for (const part of message.parts) {
     if (part.type === 'text') {
       text += part.text
     }

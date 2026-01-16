@@ -4,11 +4,12 @@
  * Manages available templates and provides selection functionality.
  */
 
-import type { Template, TemplateInfo, TemplateComponent } from './types'
+import type { Template, TemplateInfo } from './types'
 
 // Import all templates
 import * as defaultTemplate from './default'
 import * as minimalTemplate from './minimal'
+import * as cherryTemplate from './cherry'
 
 /**
  * Registry of all available templates
@@ -21,6 +22,10 @@ export const templates: Record<string, Template> = {
   minimal: {
     ...minimalTemplate.info,
     component: minimalTemplate.Template,
+  },
+  cherry: {
+    ...cherryTemplate.info,
+    component: cherryTemplate.Template,
   },
 }
 
