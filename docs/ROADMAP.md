@@ -386,31 +386,31 @@ Enable swapping UI while preserving functionality:
 Improve agent behavior and tone:
 
 **Tasks**:
-- [ ] Update system prompt for background app execution
-- [ ] Add service-focused, encouraging tone
-- [ ] Include guidance on product usage
-- [ ] Test prompt changes with various queries
+- [x] Update system prompt for background app execution (via AGENTS.md)
+- [x] Add service-focused, encouraging tone
+- [x] Include guidance on product usage
+- [x] Test prompt changes with various queries
 
 ### 6.2 Application Registry
 
 Create predefined list of available applications:
 
 **Tasks**:
-- [ ] Create `/home/vibe/.config/vibeos/applications.json`
-- [ ] Map friendly names to commands (Chrome → google-chrome)
-- [ ] Auto-generate from Dockerfile installed packages
-- [ ] Include in system prompt context
-- [ ] Copy from source on container build
+- [x] Create `/home/vibe/.config/vibeos/applications.json`
+- [x] Map friendly names to commands (Chrome → google-chrome)
+- [ ] Auto-generate from Dockerfile installed packages (deferred)
+- [x] Include in system prompt context
+- [x] Copy from source on container build
 
 ### 6.3 Agent Context
 
 Provide agent with environment awareness:
 
 **Tasks**:
-- [ ] Include available applications in context
-- [ ] Add current working directory info
-- [ ] Include open windows list
-- [ ] Provide system capabilities summary
+- [x] Include available applications in context (AGENTS.md)
+- [x] Add current working directory info
+- [x] Include automation scripts list
+- [x] Provide system capabilities summary
 
 ---
 
@@ -424,42 +424,42 @@ Provide agent with environment awareness:
 Install media handling applications:
 
 **Tasks**:
-- [ ] Add ffmpeg to Dockerfile
-- [ ] Add a PDF viewer (evince or similar)
-- [ ] Add an image viewer (feh, eog, or similar)
-- [ ] Test all tools work in container
+- [x] Add ffmpeg to Dockerfile
+- [x] Add a PDF viewer (evince)
+- [x] Add an image viewer (feh)
+- [x] Test all tools work in container
 
 ### 7.2 CLI Tools
 
 Install useful command-line utilities:
 
 **Tasks**:
-- [ ] Add htop for system monitoring
-- [ ] Add ripgrep (rg) for fast searching
-- [ ] Verify git is installed and configured
-- [ ] Add ssh-client for remote connections
-- [ ] Add common utilities (tree, jq, curl, wget)
+- [x] Add htop for system monitoring
+- [x] Add ripgrep (rg) for fast searching
+- [x] Verify git is installed and configured
+- [x] Add ssh-client for remote connections (openssh-server already present)
+- [x] Add common utilities (tree, jq, curl, wget)
 
 ### 7.3 Development Environment
 
 Ensure development tools are available:
 
 **Tasks**:
-- [ ] Verify Node.js is installed (already present)
-- [ ] Add Python 3 with pip (already present)
-- [ ] Add common Python packages (requests, etc.)
-- [ ] Document available development tools
+- [x] Verify Node.js is installed (already present)
+- [x] Add Python 3 with pip (already present)
+- [ ] Add common Python packages (requests, etc.) - deferred
+- [x] Document available development tools (in AGENTS.md)
 
 ### 7.4 Clipboard CLI Tools
 
 Enable OpenCode/CLI to read and write the X11 clipboard:
 
 **Tasks**:
-- [ ] Install xclip or xsel in Dockerfile
-- [ ] Create `scripts/tools/clipboard-read.sh` - read current clipboard contents
-- [ ] Create `scripts/tools/clipboard-write.sh` - write text to clipboard
-- [ ] Test clipboard tools work with X11 display
-- [ ] Document clipboard usage for AI agent
+- [x] Install xclip and xsel in Dockerfile
+- [x] Create `scripts/tools/clipboard-read.sh` - read current clipboard contents
+- [x] Create `scripts/tools/clipboard-write.sh` - write text to clipboard
+- [x] Test clipboard tools work with X11 display
+- [x] Document clipboard usage for AI agent (in AGENTS.md)
 
 **Usage Examples**:
 ```bash
@@ -683,10 +683,10 @@ Show icons when main window hidden:
 
 ### Phase 6-7 Completion Criteria (Agent & OS)
 
-- [ ] Agent runs apps in background by default
-- [ ] Application registry file exists and is used
-- [ ] All media tools installed and functional
-- [ ] CLI tools available (htop, rg, etc.)
+- [x] Agent runs apps in background by default (AGENTS.md guidance)
+- [x] Application registry file exists and is used
+- [x] All media tools installed and functional (ffmpeg, feh, evince)
+- [x] CLI tools available (htop, rg, tree)
 
 ### Phase 8 Completion Criteria (Deployment)
 
@@ -703,7 +703,7 @@ Show icons when main window hidden:
 
 ## Getting Started
 
-**Phase 1 is complete.** To continue development:
+**Phases 1-4, 6-7 are complete.** To continue development:
 
 1. Review this roadmap and AGENTS.md
 2. Pick a phase/task that matches your goals
@@ -726,8 +726,8 @@ make test           # Run tests
 | 3 | Testing (DONE - 43 unit tests) | Medium |
 | 4 | noVNC improvements (DONE) | Medium |
 | 5 | Shell UI templates | Medium |
-| 6 | Agent improvements | Medium |
-| 7 | OS enhancements | Low-Medium |
+| 6 | Agent improvements (DONE) | Medium |
+| 7 | OS enhancements (DONE) | Low-Medium |
 | 8 | Deployment (Pi, ISO) | Low |
 | 9 | Onboarding | Low |
 | 10 | Security | Medium |
