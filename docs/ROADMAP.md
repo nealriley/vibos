@@ -6,7 +6,15 @@
 
 ## Executive Summary
 
-This roadmap outlines the next development phase for VibeOS, focusing on **component separation**, **infrastructure modularity**, and **integration improvements**. The goal is to prepare the codebase for scaling, easier maintenance, and future feature development.
+This roadmap outlines the development phases for VibeOS, covering:
+
+- **Phases 1-3**: Code organization, architecture improvements, and testing
+- **Phases 4-5**: noVNC web interface and shell UI template system
+- **Phases 6-7**: OpenCode agent improvements and OS enhancements
+- **Phases 8-9**: Deployment options (Raspberry Pi, ISO) and onboarding
+- **Phases 10-11**: Security, production readiness, and additional features
+
+The goal is to prepare the codebase for scaling, improve user experience, expand deployment options, and enable easier maintenance.
 
 ---
 
@@ -276,12 +284,255 @@ Expand test coverage:
 
 ---
 
-## Phase 4: Security & Production Readiness
+## Phase 4: noVNC & Web Interface
+
+**Timeline**: 1 week  
+**Priority**: Medium
+
+### 4.1 Screenshot Capability
+
+Add ability to capture canvas element as image:
+
+**Tasks**:
+- [ ] Research canvas-to-image export methods
+- [ ] Add screenshot button to beta.html toolbar
+- [ ] Implement download or copy-to-clipboard functionality
+- [ ] Test across browsers
+
+### 4.2 Clipboard Integration
+
+Pull clipboard contents from VNC session:
+
+**Tasks**:
+- [ ] Research noVNC clipboard API
+- [ ] Add "Copy from VNC" button to toolbar
+- [ ] Auto-copy to host clipboard on click
+- [ ] Show toast notification on success
+
+### 4.3 Key Command Buttons
+
+Send special key combinations to VNC:
+
+**Tasks**:
+- [ ] Add Alt+Tab button
+- [ ] Add Ctrl+Alt+Delete button
+- [ ] Add Super (Windows) key button
+- [ ] Add other useful shortcuts (Ctrl+C, Ctrl+V, Escape)
+
+### 4.4 UI Cleanup
+
+- [ ] Remove non-functioning 'Reset' button
+- [ ] Clean up toolbar layout
+- [ ] Add tooltips to buttons
+
+---
+
+## Phase 5: Shell UI Templates
 
 **Timeline**: 2-3 weeks  
 **Priority**: Medium
 
-### 4.1 API Authentication
+### 5.1 Multi-Template Architecture
+
+Allow cycling through different UI templates:
+
+**Tasks**:
+- [ ] Design template switching mechanism
+- [ ] Create template configuration file
+- [ ] Add runtime template selection
+- [ ] Preserve API integration across templates
+
+### 5.2 Template Selection UI
+
+Let users choose their preferred interface:
+
+**Tasks**:
+- [ ] Add template selector to settings/menu
+- [ ] Show template previews
+- [ ] Remember user's template preference
+- [ ] Hot-reload on template switch
+
+### 5.3 External Template Integration
+
+Integrate existing chat UI templates:
+
+**Tasks**:
+- [ ] Research open-source chat UI templates (React/Electron)
+- [ ] Evaluate AI-focused chat templates
+- [ ] Port one template as proof-of-concept
+- [ ] Document template integration process
+
+### 5.4 Template API Adapter
+
+Enable swapping UI while preserving functionality:
+
+**Tasks**:
+- [ ] Define template interface contract
+- [ ] Create adapter layer for OpenCode API
+- [ ] Document required hooks/methods for templates
+- [ ] Create template starter kit
+
+---
+
+## Phase 6: OpenCode Agent Improvements
+
+**Timeline**: 1 week  
+**Priority**: Medium
+
+### 6.1 System Prompt Enhancement
+
+Improve agent behavior and tone:
+
+**Tasks**:
+- [ ] Update system prompt for background app execution
+- [ ] Add service-focused, encouraging tone
+- [ ] Include guidance on product usage
+- [ ] Test prompt changes with various queries
+
+### 6.2 Application Registry
+
+Create predefined list of available applications:
+
+**Tasks**:
+- [ ] Create `/home/vibe/.config/vibeos/applications.json`
+- [ ] Map friendly names to commands (Chrome → google-chrome)
+- [ ] Auto-generate from Dockerfile installed packages
+- [ ] Include in system prompt context
+- [ ] Copy from source on container build
+
+### 6.3 Agent Context
+
+Provide agent with environment awareness:
+
+**Tasks**:
+- [ ] Include available applications in context
+- [ ] Add current working directory info
+- [ ] Include open windows list
+- [ ] Provide system capabilities summary
+
+---
+
+## Phase 7: Operating System Enhancements
+
+**Timeline**: 1 week  
+**Priority**: Low-Medium
+
+### 7.1 Media Tools
+
+Install media handling applications:
+
+**Tasks**:
+- [ ] Add ffmpeg to Dockerfile
+- [ ] Add a PDF viewer (evince or similar)
+- [ ] Add an image viewer (feh, eog, or similar)
+- [ ] Test all tools work in container
+
+### 7.2 CLI Tools
+
+Install useful command-line utilities:
+
+**Tasks**:
+- [ ] Add htop for system monitoring
+- [ ] Add ripgrep (rg) for fast searching
+- [ ] Verify git is installed and configured
+- [ ] Add ssh-client for remote connections
+- [ ] Add common utilities (tree, jq, curl, wget)
+
+### 7.3 Development Environment
+
+Ensure development tools are available:
+
+**Tasks**:
+- [ ] Verify Node.js is installed (already present)
+- [ ] Add Python 3 with pip (already present)
+- [ ] Add common Python packages (requests, etc.)
+- [ ] Document available development tools
+
+---
+
+## Phase 8: Deployment Options
+
+**Timeline**: 3-4 weeks  
+**Priority**: Low
+
+### 8.1 Common Core Architecture
+
+Ensure builds share common foundation:
+
+**Tasks**:
+- [ ] Identify Docker-specific code to abstract
+- [ ] Create shared configuration layer
+- [ ] Document architecture for multi-target builds
+- [ ] Create build system for different targets
+
+### 8.2 Raspberry Pi Build
+
+Create ARM64 build for Raspberry Pi:
+
+**Tasks**:
+- [ ] Research Pi-specific requirements
+- [ ] Create ARM64 Dockerfile or build script
+- [ ] Test on Raspberry Pi 4/5
+- [ ] Document Pi-specific setup instructions
+- [ ] Handle GPU/display differences
+
+### 8.3 ISO Installer (Stretch Goal)
+
+Create installable OS image:
+
+**Tasks**:
+- [ ] Research Linux live CD/installer creation
+- [ ] Evaluate tools (Ubuntu Customization Kit, etc.)
+- [ ] Create minimal base system specification
+- [ ] Build proof-of-concept ISO
+- [ ] Document installation process
+
+---
+
+## Phase 9: Onboarding Experience
+
+**Timeline**: 2 weeks  
+**Priority**: Low  
+**Depends on**: Phase 5 (Shell UI Templates)
+
+### 9.1 Guided Onboarding Chat
+
+Create onboarding assistant interface:
+
+**Tasks**:
+- [ ] Design onboarding conversation flow
+- [ ] Create onboarding-specific shell template
+- [ ] Script welcome messages and guidance
+- [ ] Include product feature highlights
+
+### 9.2 Interactive Tutorial
+
+Guide users through key features:
+
+**Tasks**:
+- [ ] Create tutorial prompts (try !chrome, try $ls)
+- [ ] Show keyboard shortcut hints
+- [ ] Demonstrate AI capabilities
+- [ ] Track onboarding completion
+
+### 9.3 First-Run Detection
+
+Show onboarding only for new users:
+
+**Tasks**:
+- [ ] Detect first-run state
+- [ ] Store onboarding completion flag
+- [ ] Allow re-running onboarding from settings
+- [ ] Skip for returning users
+
+---
+
+## Phase 10: Security & Production Readiness
+
+**Timeline**: 2-3 weeks  
+**Priority**: Medium
+
+### 10.1 API Authentication
 
 Add optional authentication for OpenCode API:
 
@@ -300,7 +551,7 @@ Authorization: Bearer your-secret-token
 - [ ] Update vibeos-send script for auth
 - [ ] Document auth configuration
 
-### 4.2 VNC Security
+### 10.2 VNC Security
 
 Improve VNC security options:
 
@@ -309,7 +560,7 @@ Improve VNC security options:
 - [ ] Document security best practices
 - [ ] Add TLS/SSL option for VNC
 
-### 4.3 Container Hardening
+### 10.3 Container Hardening
 
 **Tasks**:
 - [ ] Research alternatives to seccomp:unconfined
@@ -319,12 +570,12 @@ Improve VNC security options:
 
 ---
 
-## Phase 5: Feature Development
+## Phase 11: Additional Features
 
 **Timeline**: Ongoing  
 **Priority**: Low-Medium
 
-### 5.1 Session Persistence
+### 11.1 Session Persistence
 
 Save and restore conversation history:
 
@@ -334,7 +585,7 @@ Save and restore conversation history:
 - [ ] Implement restore on startup
 - [ ] Add clear history option
 
-### 5.2 Multi-Session Support
+### 11.2 Multi-Session Support
 
 Support multiple concurrent AI sessions:
 
@@ -343,7 +594,7 @@ Support multiple concurrent AI sessions:
 - [ ] Update state management for multiple sessions
 - [ ] Add session switching keyboard shortcuts
 
-### 5.3 Message Pagination
+### 11.3 Message Pagination
 
 Implement message pagination:
 
@@ -352,7 +603,7 @@ Implement message pagination:
 - [ ] Add "Load more" button
 - [ ] Virtual scrolling for large histories
 
-### 5.4 Desktop Icons
+### 11.4 Desktop Icons
 
 Show icons when main window hidden:
 
@@ -384,21 +635,40 @@ Show icons when main window hidden:
 
 ## Success Metrics
 
-### Phase 1-2 Completion Criteria
+### Phase 1-2 Completion Criteria (Code Organization & Architecture)
 
-- [ ] `main.js` under 200 lines
-- [ ] All modules have single responsibility
+- [x] `main.js` under 200 lines (achieved: ~140 lines)
+- [x] All modules have single responsibility
 - [ ] Event bus handling all SSE events
 - [ ] OpenCode client used throughout
-- [ ] No duplicate code in window scripts
+- [x] No duplicate code in window scripts (shared library created)
 
-### Phase 3 Completion Criteria
+### Phase 3 Completion Criteria (Testing)
 
 - [ ] 80%+ test coverage for hooks
 - [ ] All components have basic tests
 - [ ] CI pipeline runs tests on PR
 
-### Phase 4 Completion Criteria
+### Phase 4-5 Completion Criteria (noVNC & Shell UI)
+
+- [ ] Screenshot button works in beta.html
+- [ ] Clipboard copy from VNC works
+- [ ] At least 2 shell UI templates available
+- [ ] Template switching works at runtime
+
+### Phase 6-7 Completion Criteria (Agent & OS)
+
+- [ ] Agent runs apps in background by default
+- [ ] Application registry file exists and is used
+- [ ] All media tools installed and functional
+- [ ] CLI tools available (htop, rg, etc.)
+
+### Phase 8 Completion Criteria (Deployment)
+
+- [ ] Raspberry Pi build runs successfully
+- [ ] Common core shared between Docker and Pi builds
+
+### Phase 10 Completion Criteria (Security)
 
 - [ ] Auth works end-to-end
 - [ ] Security documentation complete
@@ -408,11 +678,11 @@ Show icons when main window hidden:
 
 ## Getting Started
 
-To begin development on Phase 1:
+**Phase 1 is complete.** To continue development:
 
 1. Review this roadmap and AGENTS.md
-2. Start with main.js modularization (Task 1.1)
-3. Create PRs for each module extraction
+2. Pick a phase/task that matches your goals
+3. Create feature branches for changes
 4. Update documentation as you go
 
 ```bash
@@ -422,6 +692,21 @@ make logs           # Monitor logs
 make restart-shell  # After UI changes
 make test           # Run tests
 ```
+
+### Quick Reference
+
+| Phase | Focus | Priority |
+|-------|-------|----------|
+| 1-2 | Code organization (DONE) | High |
+| 3 | Testing | Medium |
+| 4 | noVNC improvements | Medium |
+| 5 | Shell UI templates | Medium |
+| 6 | Agent improvements | Medium |
+| 7 | OS enhancements | Low-Medium |
+| 8 | Deployment (Pi, ISO) | Low |
+| 9 | Onboarding | Low |
+| 10 | Security | Medium |
+| 11 | Additional features | Low-Medium |
 
 ---
 
